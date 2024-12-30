@@ -17,7 +17,7 @@ except sqlite3.Error as e:
 
 # Create the filter_state table if it doesn't exist
 try:
-    cursor.execute('''CREATE TABLE IF NOT EXISTS filter_state (
+    cursor.execute('''CREATE TABLE IF NOT EXISTS system_control (
                       id INTEGER PRIMARY KEY AUTOINCREMENT,
                       timestamp TEXT,
                       filter_state TEXT)''')
