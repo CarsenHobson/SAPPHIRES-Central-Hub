@@ -44,6 +44,42 @@ EMOJI_PATHS = {
 # HELPER FUNCTIONS
 ###################################################
 
+def get_spacing(aqi_length, delta_length):
+    # Predefined values for each combination of aqi_length and delta_length
+    spacing_values = {
+        (1, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (1, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (1, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (1, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (2, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (2, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (2, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (2, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (3, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (3, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (3, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (3, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (4, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (4, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (4, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        (4, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+    }
+
+    # Retrieve the corresponding values or raise an error for invalid inputs
+    key = (aqi_length, delta_length)
+    if key in spacing_values:
+        values = spacing_values[key]
+        return (
+            values["aqi_x_coord"],
+            values["delta_x_coord"],
+            values["arrow_coord"],
+            values["aqi_font"],
+            values["delta_font"],
+            values["arrow_size"],
+        )
+    else:
+        raise ValueError(f"Invalid combination of aqi_length ({aqi_length}) and delta_length ({delta_length}).")
+
 def create_tables():
     """
     Create the necessary tables if they do not exist.
@@ -688,45 +724,19 @@ def update_dashboard(n):
     except Exception as e:
         print(f"Error retrieving data in update_dashboard: {e}")
 
-    # Prepare gauge figures
-    def get_position_offset(value):
-        length = len(str(value))
-        if length == 1:
-            return 0.45
-        elif length == 2:
-            return 0.42
-        elif length == 3:
-            return 0.41
-        elif length == 4:
-            return 0.38
-        return 0.45
-
-    def arrow_position_offset(value):
-        length = len(str(value))
-        if length == 1:
-            return 0.62
-        elif length == 2:
-            return 0.68
-        elif length == 3:
-            return 0.70
-        elif length == 4:
-            return 0.69
-        return 0.62
-
-    def delta_position_offset(value):
-        length = len(str(value))
-        if length == 1:
-            return 0.73
-        elif length == 2:
-            return 0.78
-        elif length == 3:
-            return 0.84
-        elif length == 4:
-            return 0.86
-        return 0.73
-
+    #Get correct emoji to use
     indoor_emoji = get_aqi_emoji(indoor_aqi)
     outdoor_emoji = get_aqi_emoji(outdoor_aqi)
+
+    #Get lengths of aqi and delta
+    indoor_aqi_length = len(indoor_aqi)
+    outdoor_aqi_length = len(outdoor_aqi)
+    indoor_delta_length = len(indoor_delta_text)
+    outdoor_delta_length = len(outdoor_delta_text)
+
+    #Get coordinated and fonts for aqi, delta, and arrow
+    indoor_aqi_x_coord, indoor_delta_x_coord, indoor_arrow_coord, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta_text)
+    outdoor_aqi_x_coord, outdoor_delta_x_coord, outdoor_arrow_coord, outdoor_aqi_font, outdoor_delta_font, outdoor_arrow_size = get_spacing(outdoor_aqi, outdoor_delta_text)
 
     # Indoor Gauge
     indoor_gauge = go.Figure(go.Indicator(
@@ -742,39 +752,28 @@ def update_dashboard(n):
     ))
     indoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
     indoor_gauge.add_annotation(
-        x=get_position_offset(indoor_aqi),
-        y=0.25,
+        x=indoor_aqi_x_coord, y=0.25,
         text=f"<b>AQI:{indoor_aqi}</b>",
         showarrow=False,
-        font=dict(size=30, color="black"),
-        xanchor="center",
-        yanchor="bottom"
-    )
-    indoor_gauge.add_layout_image(
-        dict(
-            source=indoor_emoji,
-            xref="paper", yref="paper",
-            x=0.5, y=0.5,
-            sizex=0.2, sizey=0.2,
-            xanchor="center", yanchor="middle"
-        )
+        font=dict(size=indoor_aqi_font, color="black"),
+        xanchor="center", yanchor="bottom"
     )
     indoor_gauge.add_annotation(
-        x=arrow_position_offset(indoor_aqi),
-        y=0.24,
+        x=indoor_arrow_coord, y=0.24,
         text=indoor_arrow,
-        font=dict(size=30, color=indoor_arrow_color),
+        font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
         showarrow=False
     )
     indoor_gauge.add_annotation(
-        x=delta_position_offset(indoor_delta_text),
-        y=0.28,
+        x=indoor_delta_x_coord, y=0.28,
         text=indoor_delta_text,
-        font=dict(size=20, color=indoor_arrow_color),
+        font=dict(size=indoor_delta_font, color=indoor_arrow_color),
         showarrow=False
     )
 
     # Outdoor Gauge
+    aqi_x, arrow_x, delta_x = get_x_positions(outdoor_aqi, outdoor_delta_text)
+
     outdoor_gauge = go.Figure(go.Indicator(
         mode="gauge",
         value=outdoor_aqi,
@@ -788,40 +787,26 @@ def update_dashboard(n):
     ))
     outdoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
     outdoor_gauge.add_annotation(
-        x=get_position_offset(outdoor_aqi),
-        y=0.25,
+        x=outdoor_aqi_x_coord, y=0.25,
         text=f"<b>AQI:{outdoor_aqi}</b>",
         showarrow=False,
-        font=dict(size=30, color="black"),
-        xanchor="center",
-        yanchor="bottom"
-    )
-    outdoor_gauge.add_layout_image(
-        dict(
-            source=outdoor_emoji,
-            xref="paper", yref="paper",
-            x=0.5, y=0.5,
-            sizex=0.2, sizey=0.2,
-            xanchor="center", yanchor="middle"
-        )
+        font=dict(size=outdoor_aqi_font, color="black"),
+        xanchor="center", yanchor="bottom"
     )
     outdoor_gauge.add_annotation(
-        x=arrow_position_offset(outdoor_aqi),
-        y=0.24,
+        x=outdoor_arrow_coord, y=0.24,
         text=outdoor_arrow,
-        font=dict(size=30, color=outdoor_arrow_color),
+        font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
         showarrow=False
     )
     outdoor_gauge.add_annotation(
-        x=delta_position_offset(outdoor_delta_text),
-        y=0.28,
+        x=outdoor_delta_x_coord, y=0.28,
         text=outdoor_delta_text,
-        font=dict(size=20, color=outdoor_arrow_color),
+        font=dict(size=outdoor_delta_font, color=outdoor_arrow_color),
         showarrow=False
     )
 
     return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
-
 
 @app.callback(
     [Output('disable-fan', 'children'),
