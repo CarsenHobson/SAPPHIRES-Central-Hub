@@ -463,6 +463,8 @@ def update_dashboard(n):
     Periodically fetches the latest indoor/outdoor data from the database and updates:
     - Indoor/Outdoor AQI gauges
     - Indoor/Outdoor temperature displays
+
+    Gracefully handles empty or missing data.
     """
     # Default fallback values
     indoor_aqi = 0
@@ -478,9 +480,10 @@ def update_dashboard(n):
 
     try:
         conn = sqlite3.connect(DB_PATH)
-        # Fetch last 60 indoor/outdoor values
+        # Fetch last 60 indoor/outdoor values; handle empty results
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
         outdoor_pm = pd.read_sql("SELECT pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
+
         indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
         outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
         conn.close()
@@ -514,25 +517,21 @@ def update_dashboard(n):
     except Exception as e:
         print(f"Error retrieving data in update_dashboard: {e}")
 
-    def get_x_positions(aqi, delta_text, base_x=0.45, char_spacing=0.02):
-        """
-        Compute relative x positions for AQI value, arrow, and delta based on text length.
-        """
-        aqi_length = len(str(aqi))
-        delta_length = len(delta_text)
-        # You can refine logic for text alignment here as needed
-        adjusted_base_x = base_x - (aqi_length * char_spacing)
-
-        aqi_x = adjusted_base_x
-        arrow_x = aqi_x + (aqi_length * char_spacing * 1.5)
-        delta_x = aqi_x + (aqi_length * char_spacing * 2)
-        return aqi_x, arrow_x, delta_x
-
+    #Get correct emoji to use
     indoor_emoji = get_aqi_emoji(indoor_aqi)
     outdoor_emoji = get_aqi_emoji(outdoor_aqi)
 
+    #Get lengths of aqi and delta
+    indoor_aqi_length = len(indoor_aqi)
+    outdoor_aqi_length = len(outdoor_aqi)
+    indoor_delta_length = len(indoor_delta_text)
+    outdoor_delta_length = len(outdoor_delta_text)
+
+    #Get coordinated and fonts for aqi, delta, and arrow
+    indoor_aqi_x_coord, indoor_delta_x_coord, indoor_arrow_coord, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta_text)
+    outdoor_aqi_x_coord, outdoor_delta_x_coord, outdoor_arrow_coord, outdoor_aqi_font, outdoor_delta_font, outdoor_arrow_size = get_spacing(outdoor_aqi, outdoor_delta_text)
+
     # Indoor Gauge
-    aqi_x, arrow_x, delta_x = get_x_positions(indoor_aqi, indoor_delta_text)
     indoor_gauge = go.Figure(go.Indicator(
         mode="gauge",
         value=indoor_aqi,
@@ -546,27 +545,28 @@ def update_dashboard(n):
     ))
     indoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
     indoor_gauge.add_annotation(
-        x=aqi_x, y=0.25,
+        x=indoor_aqi_x_coord, y=0.25,
         text=f"<b>AQI:{indoor_aqi}</b>",
         showarrow=False,
-        font=dict(size=30, color="black"),
+        font=dict(size=indoor_aqi_font, color="black"),
         xanchor="center", yanchor="bottom"
     )
     indoor_gauge.add_annotation(
-        x=arrow_x, y=0.24,
+        x=indoor_arrow_coord, y=0.24,
         text=indoor_arrow,
-        font=dict(size=30, color=indoor_arrow_color),
+        font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
         showarrow=False
     )
     indoor_gauge.add_annotation(
-        x=delta_x, y=0.28,
+        x=indoor_delta_x_coord, y=0.28,
         text=indoor_delta_text,
-        font=dict(size=20, color=indoor_arrow_color),
+        font=dict(size=indoor_delta_font, color=indoor_arrow_color),
         showarrow=False
     )
 
     # Outdoor Gauge
     aqi_x, arrow_x, delta_x = get_x_positions(outdoor_aqi, outdoor_delta_text)
+
     outdoor_gauge = go.Figure(go.Indicator(
         mode="gauge",
         value=outdoor_aqi,
@@ -580,22 +580,22 @@ def update_dashboard(n):
     ))
     outdoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
     outdoor_gauge.add_annotation(
-        x=aqi_x, y=0.25,
+        x=outdoor_aqi_x_coord, y=0.25,
         text=f"<b>AQI:{outdoor_aqi}</b>",
         showarrow=False,
-        font=dict(size=30, color="black"),
+        font=dict(size=outdoor_aqi_font, color="black"),
         xanchor="center", yanchor="bottom"
     )
     outdoor_gauge.add_annotation(
-        x=arrow_x, y=0.24,
+        x=outdoor_arrow_coord, y=0.24,
         text=outdoor_arrow,
-        font=dict(size=30, color=outdoor_arrow_color),
+        font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
         showarrow=False
     )
     outdoor_gauge.add_annotation(
-        x=delta_x, y=0.28,
+        x=outdoor_delta_x_coord, y=0.28,
         text=outdoor_delta_text,
-        font=dict(size=20, color=outdoor_arrow_color),
+        font=dict(size=outdoor_delta_font, color=outdoor_arrow_color),
         showarrow=False
     )
 
