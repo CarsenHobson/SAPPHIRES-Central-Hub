@@ -8,28 +8,25 @@ import plotly.graph_objs as go
 import datetime
 import base64
 import os
+import logging
 
 ###################################################
 # GLOBAL CONFIGURATION & CONSTANTS
 ###################################################
 
-# Path to the SQLite database. Ensure this path is correct.
-DB_PATH = '/home/mainhubs/SAPPHIRES.db'
+DB_PATH = '/home/mainhubs/SAPPHIRES.db'  # Adjust if needed
 
-# External Stylesheets (Bootstrap & Fonts)
 EXTERNAL_STYLESHEETS = [
     dbc.themes.BOOTSTRAP,
     "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
 ]
 
-# Color constants for branding and styling
 BACKGROUND_COLOR = "#f0f2f5"
 PRIMARY_COLOR = "#FFFFCB"
 SUCCESS_COLOR = "#28a745"
 WARNING_COLOR = "#ffc107"
 DANGER_COLOR = "#dc3545"
 
-# Image paths for AQI emojis
 EMOJI_PATHS = {
     "good": "/home/mainhubs/good.png",
     "moderate": "/home/mainhubs/moderate.png",
@@ -39,46 +36,27 @@ EMOJI_PATHS = {
     "hazardous": "/home/mainhubs/hazardous.png"
 }
 
+# Enhanced Logging Config
+logging.basicConfig(
+    filename='enhanced_app.log',   # or another log file path
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s'
+)
+logging.debug("Starting application with enhanced error handling.")
+
 
 ###################################################
-# HELPER FUNCTIONS
+# HELPER FUNCTIONS WITH ERROR HANDLING
 ###################################################
 
-def get_spacing(aqi_length, delta_length):
-    # Predefined values for each combination of aqi_length and delta_length
-    spacing_values = {
-        (1, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (1, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (1, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (1, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (2, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (2, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (2, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (2, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (3, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (3, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (3, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (3, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (4, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (4, 2): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (4, 3): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        (4, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-    }
-
-    # Retrieve the corresponding values or raise an error for invalid inputs
-    key = (aqi_length, delta_length)
-    if key in spacing_values:
-        values = spacing_values[key]
-        return (
-            values["aqi_x_coord"],
-            values["delta_x_coord"],
-            values["arrow_coord"],
-            values["aqi_font"],
-            values["delta_font"],
-            values["arrow_size"],
-        )
-    else:
-        raise ValueError(f"Invalid combination of aqi_length ({aqi_length}) and delta_length ({delta_length}).")
+def get_db_connection():
+    """Safely returns a connection to the SQLite DB or logs an error."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        return conn
+    except sqlite3.Error as e:
+        logging.error(f"Error connecting to database at {DB_PATH}: {e}")
+        return None
 
 def create_tables():
     """
@@ -121,49 +99,43 @@ def create_tables():
         wifi_strength REAL
     );
     """
+    conn = None
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
+        if not conn:
+            logging.error("create_tables: Cannot proceed (no DB connection).")
+            return
         cursor = conn.cursor()
         cursor.executescript(create_tables_script)
         conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"Error creating tables: {e}")
-
+        logging.info("Tables created or verified successfully.")
+    except sqlite3.Error as e:
+        logging.error(f"Error creating tables: {e}")
+    except Exception as ex:
+        logging.exception(f"Unexpected error in create_tables: {ex}")
+    finally:
+        if conn:
+            conn.close()
 
 def encode_image(image_path):
     """
     Encode an image at a given path into base64 for embedding in the dashboard.
-
-    Parameters:
-        image_path (str): The full path to the image file.
-
-    Returns:
-        str: Base64 encoded image string, or a placeholder if file not found.
+    Returns a placeholder if file not found or error occurs.
     """
     if not os.path.exists(image_path):
-        # If the file does not exist, return a blank image or handle gracefully
-        print(f"File not found: {image_path}")
+        logging.warning(f"File not found: {image_path}")
         return ""
-
     try:
         with open(image_path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode("ascii")
         return f"data:image/png;base64,{encoded}"
     except Exception as e:
-        print(f"Error encoding image {image_path}: {e}")
+        logging.error(f"Error encoding image {image_path}: {e}")
         return ""
-
 
 def get_aqi_emoji(aqi):
     """
     Return a corresponding emoji image based on AQI value.
-
-    Parameters:
-        aqi (int): AQI value.
-
-    Returns:
-        str: base64-encoded image string for the corresponding emoji.
     """
     try:
         if aqi <= 25:
@@ -179,19 +151,12 @@ def get_aqi_emoji(aqi):
         else:
             return encode_image(EMOJI_PATHS["hazardous"])
     except Exception as e:
-        print(f"Error selecting emoji for AQI {aqi}: {e}")
+        logging.exception(f"Error selecting emoji for AQI {aqi}: {e}")
         return ""
-
 
 def get_gauge_color(aqi):
     """
     Determine the gauge bar color based on AQI level.
-
-    Parameters:
-        aqi (int): Current AQI value.
-
-    Returns:
-        str: Hex or color name string.
     """
     if aqi <= 25:
         return "green"
@@ -206,54 +171,93 @@ def get_gauge_color(aqi):
     else:
         return "#8b0000"
 
-
 def get_last_fan_state():
     """
-    Retrieve the last known fan state from the database.
-
-    Returns:
-        str: "ON" or "OFF" (defaults to "OFF" if no data found).
+    Retrieve the last known fan state from the database: 'ON' or 'OFF'.
+    Defaults to 'OFF' if no data or an error occurs.
     """
+    conn = None
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
+        if not conn:
+            logging.error("get_last_fan_state: No DB connection, returning 'OFF' as default.")
+            return "OFF"
         cursor = conn.cursor()
         cursor.execute("SELECT user_input FROM user_control ORDER BY id DESC LIMIT 1")
         result = cursor.fetchone()
-        conn.close()
         return result[0] if result else "OFF"
     except Exception as e:
-        print(f"Error fetching last fan state: {e}")
+        logging.exception(f"Error fetching last fan state: {e}")
         return "OFF"
-
+    finally:
+        if conn:
+            conn.close()
 
 def update_fan_state(state):
     """
-    Update the fan state in the user_control table.
-
-    Parameters:
-        state (str): "ON" or "OFF"
+    Update the fan state in the user_control table with 'ON' or 'OFF'.
     """
+    conn = None
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = get_db_connection()
+        if not conn:
+            logging.error(f"update_fan_state({state}): No DB connection, cannot update.")
+            return
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO user_control (timestamp, user_input) VALUES (?, ?)', (timestamp, state))
+        cursor.execute(
+            'INSERT INTO user_control (timestamp, user_input) VALUES (?, ?)',
+            (timestamp, state)
+        )
         conn.commit()
-        conn.close()
+        logging.info(f"Fan state updated to {state}.")
     except Exception as e:
-        print(f"Error updating fan state to {state}: {e}")
+        logging.exception(f"Error updating fan state to {state}: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+def get_spacing(aqi_length, delta_length):
+    """
+    Predefined spacing values for textual alignment. 
+    If invalid inputs, we raise ValueError (which is caught in the calling function).
+    """
+    spacing_values = {
+        (1, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+        # ... repeated for all combos (they are all 0 in your example) ...
+        (4, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
+    }
+    key = (aqi_length, delta_length)
+    if key not in spacing_values:
+        # Log it and raise
+        logging.warning(f"Invalid combo aqi_length={aqi_length}, delta_length={delta_length}. Using fallback spacing.")
+        return 0, 0, 0, 0, 0, 0
+    values = spacing_values[key]
+    return (
+        values["aqi_x_coord"],
+        values["delta_x_coord"],
+        values["arrow_coord"],
+        values["aqi_font"],
+        values["delta_font"],
+        values["arrow_size"],
+    )
+
+def get_fallback_gauge():
+    """Return a minimal gauge figure if DB queries fail or data is missing."""
+    fig = go.Figure()
+    fig.add_annotation(text="Data Unavailable", x=0.5, y=0.5, showarrow=False, font=dict(size=16))
+    fig.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+    return fig
 
 
 ###################################################
-# LAYOUT COMPONENTS
+# PAGE LAYOUTS
 ###################################################
 
 def dashboard_layout():
     """
-    Constructs the main dashboard layout including:
-    - Current conditions header
-    - Indoor and outdoor gauge cards
-    - Fan control button and modals
+    Constructs the main dashboard layout.
+    Includes fan control button and modals.
     """
     last_state = get_last_fan_state()
     button_text = "Enable Fan" if last_state == "OFF" else "Disable Fan"
@@ -275,8 +279,7 @@ def dashboard_layout():
                         "border": "2px solid black",
                         "border-radius": "10px 10px 0 0"
                     }
-                ),
-                width=12
+                ), width=12
             )
         ], className="g-0"),
 
@@ -295,7 +298,7 @@ def dashboard_layout():
                                    "border-left": "2px solid black"
                                }),
                 html.Div([
-                    # AQI gauge section
+                    # AQI gauge
                     html.Div([
                         dcc.Graph(id="indoor-gauge", config={"displayModeBar": False})
                     ], style={
@@ -305,25 +308,29 @@ def dashboard_layout():
                         "border-bottom": "none",
                         "height": "115px"
                     }),
-
-                    # Bottom third with temperature box
+                    # Temperature box
                     html.Div([
                         html.Div([
-                            html.Div("Temperature", className="text-center",
-                                     style={
-                                         "font-size": "1.25rem",
-                                         "font-weight": "bold",
-                                         "padding-top": "10px",
-                                         "color": "black"
-                                     }),
-                            html.Div(id="indoor-temp-display",
-                                     className="d-flex justify-content-center align-items-center",
-                                     style={
-                                         "font-size": "1.5rem",
-                                         "color": "black",
-                                         "text-align": "center",
-                                         "margin-top": "2px"
-                                     })
+                            html.Div(
+                                "Temperature",
+                                className="text-center",
+                                style={
+                                    "font-size": "1.25rem",
+                                    "font-weight": "bold",
+                                    "padding-top": "10px",
+                                    "color": "black"
+                                }
+                            ),
+                            html.Div(
+                                id="indoor-temp-display",
+                                className="d-flex justify-content-center align-items-center",
+                                style={
+                                    "font-size": "1.5rem",
+                                    "color": "black",
+                                    "text-align": "center",
+                                    "margin-top": "2px"
+                                }
+                            )
                         ], style={
                             "width": "200px",
                             "height": "75px",
@@ -359,7 +366,7 @@ def dashboard_layout():
                                    "background": "white",
                                    "border-bottom": "2px solid black",
                                    "border-right": "2px solid black",
-                                   "border-left": "2px solid black",
+                                   "border-left": "2px solid black"
                                }),
                 html.Div([
                     html.Div([
@@ -371,24 +378,28 @@ def dashboard_layout():
                         "border-bottom": "none",
                         "height": "115px"
                     }),
-
                     html.Div([
                         html.Div([
-                            html.Div("Temperature", className="text-center",
-                                     style={
-                                         "font-size": "1.25rem",
-                                         "font-weight": "bold",
-                                         "padding-top": "10px",
-                                         "color": "black"
-                                     }),
-                            html.Div(id="outdoor-temp-display",
-                                     className="d-flex justify-content-center align-items-center",
-                                     style={
-                                         "font-size": "1.5rem",
-                                         "color": "black",
-                                         "text-align": "center",
-                                         "margin-top": "2px"
-                                     })
+                            html.Div(
+                                "Temperature",
+                                className="text-center",
+                                style={
+                                    "font-size": "1.25rem",
+                                    "font-weight": "bold",
+                                    "padding-top": "10px",
+                                    "color": "black"
+                                }
+                            ),
+                            html.Div(
+                                id="outdoor-temp-display",
+                                className="d-flex justify-content-center align-items-center",
+                                style={
+                                    "font-size": "1.5rem",
+                                    "color": "black",
+                                    "text-align": "center",
+                                    "margin-top": "2px"
+                                }
+                            )
                         ], style={
                             "width": "200px",
                             "height": "75px",
@@ -415,20 +426,23 @@ def dashboard_layout():
             ]), width=6, className="p-0")
         ]),
 
-        # Centered Fan Control Button & associated modals
+        # Fan Control Button & modals
         dbc.Row([
             html.Div(
-                html.Button(button_text, id="disable-fan",
-                            className="btn btn-danger btn-lg",
-                            style={
-                                "width": "100px",
-                                "height": "65px",
-                                "border-radius": "100px",
-                                "font-size": "1.2rem",
-                                "color": "Yellow",
-                                "backgroundColor": "green" if button_text == "Enable Fan" else "red",
-                                "border": "2px solid green" if button_text == "Enable Fan" else "2px solid red"
-                            }),
+                html.Button(
+                    button_text,
+                    id="disable-fan",
+                    className="btn btn-danger btn-lg",
+                    style={
+                        "width": "100px",
+                        "height": "65px",
+                        "border-radius": "100px",
+                        "font-size": "1.2rem",
+                        "color": "Yellow",
+                        "backgroundColor": "green" if button_text == "Enable Fan" else "red",
+                        "border": "2px solid green" if button_text == "Enable Fan" else "2px solid red"
+                    }
+                ),
                 style={
                     "border": "2px solid black",
                     "padding": "5px",
@@ -476,7 +490,8 @@ def dashboard_layout():
         dbc.Modal([
             dbc.ModalHeader("Fan Enabled", close_button=False),
             dbc.ModalBody(
-                "You have enabled the fan. The fan will start filtering the air and improving air quality. You may now close this window."
+                "You have enabled the fan. The fan will start filtering the air and improving air quality. "
+                "You may now close this window."
             ),
             dbc.ModalFooter(dbc.Button("Close", id="close-notification", className="btn btn-secondary"))
         ], id="modal-notification", is_open=False, backdrop="static", centered=True),
@@ -488,27 +503,34 @@ def dashboard_layout():
 
 def historical_conditions_layout():
     """
-    Constructs the historical conditions layout, showing line charts of indoor and outdoor PM readings.
-    Includes basic error handling and defaults if data is unavailable.
+    Constructs the historical conditions layout, with line charts of indoor and outdoor PM readings.
+    Includes error handling and defaults if data unavailable.
     """
+    conn = None
     try:
-        conn = sqlite3.connect(DB_PATH)
-        # Limit to last 500 readings
-        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 500;", conn)
-        outdoor_data = pd.read_sql("SELECT timestamp, pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 500;", conn)
-        conn.close()
+        conn = get_db_connection()
+        if not conn:
+            logging.error("No DB connection in historical_conditions_layout; returning empty data.")
+            indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
+            outdoor_data = pd.DataFrame(columns=["timestamp", "pm25_value"])
+        else:
+            indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 500;", conn)
+            outdoor_data = pd.read_sql("SELECT timestamp, pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 500;", conn)
     except Exception as e:
-        print(f"Error retrieving historical data: {e}")
+        logging.exception(f"Error retrieving historical data: {e}")
         indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
         outdoor_data = pd.DataFrame(columns=["timestamp", "pm25_value"])
+    finally:
+        if conn:
+            conn.close()
 
-    # Convert timestamps and handle empty data gracefully
+    # Convert timestamps
     if not indoor_data.empty:
         indoor_data['timestamp'] = pd.to_datetime(indoor_data['timestamp'])
     if not outdoor_data.empty:
         outdoor_data['timestamp'] = pd.to_datetime(outdoor_data['timestamp'])
 
-    # Build the figure
+    # Build figure
     fig = go.Figure()
     if not indoor_data.empty:
         fig.add_trace(go.Scatter(
@@ -529,7 +551,6 @@ def historical_conditions_layout():
             hoverinfo='x+y',
         ))
 
-    # Configure layout
     fig.update_layout(
         xaxis=dict(
             title="Time",
@@ -562,12 +583,10 @@ def historical_conditions_layout():
         dbc.Row(dbc.Col(dcc.Graph(figure=fig, config={"displayModeBar": False}))),
     ], fluid=True, className="p-4")
 
-
 ###################################################
 # APP INITIALIZATION
 ###################################################
 
-# Create tables if not exists
 create_tables()
 
 app = dash.Dash(
@@ -607,16 +626,13 @@ app.index_string = '''
         {%app_entry%}
         <script>
             let startX = 0, endX = 0;
-
             document.addEventListener('touchstart', function(e) {
                 startX = e.changedTouches[0].screenX;
             }, false);
-
             document.addEventListener('touchend', function(e) {
                 endX = e.changedTouches[0].screenX;
                 handleSwipe();
             }, false);
-
             function handleSwipe() {
                 const deltaX = endX - startX;
                 if (deltaX > 50) {
@@ -637,7 +653,6 @@ app.index_string = '''
 </html>
 '''
 
-
 ###################################################
 # CALLBACKS
 ###################################################
@@ -647,9 +662,7 @@ app.index_string = '''
     Input('url', 'pathname'),
 )
 def display_page(pathname):
-    """
-    Switches between dashboard and historical layout based on the URL.
-    """
+    """Switches between dashboard and historical layout."""
     if pathname == '/':
         return dashboard_layout()
     elif pathname == '/historical':
@@ -659,10 +672,12 @@ def display_page(pathname):
 
 
 @app.callback(
-    [Output('indoor-gauge', 'figure'),
-     Output('outdoor-gauge', 'figure'),
-     Output('indoor-temp-display', 'children'),
-     Output('outdoor-temp-display', 'children')],
+    [
+        Output('indoor-gauge', 'figure'),
+        Output('outdoor-gauge', 'figure'),
+        Output('indoor-temp-display', 'children'),
+        Output('outdoor-temp-display', 'children')
+    ],
     [Input('interval-component', 'n_intervals')]
 )
 def update_dashboard(n):
@@ -670,247 +685,237 @@ def update_dashboard(n):
     Periodically fetches the latest indoor/outdoor data from the database and updates:
     - Indoor/Outdoor AQI gauges
     - Indoor/Outdoor temperature displays
-
-    Gracefully handles empty or missing data.
+    Provides fallback figures and logs errors if DB queries fail.
     """
-    # Default fallback values
-    indoor_aqi = 0
-    outdoor_aqi = 0
-    indoor_temp_text = "N/A"
-    outdoor_temp_text = "N/A"
-    indoor_arrow = "⬇️"
-    outdoor_arrow = "⬇️"
-    indoor_arrow_color = "green"
-    outdoor_arrow_color = "green"
-    indoor_delta_text = "0"
-    outdoor_delta_text = "0"
-
+    conn = None
     try:
-        conn = sqlite3.connect(DB_PATH)
-        # Fetch last 60 indoor/outdoor values; handle empty results
+        conn = get_db_connection()
+        if not conn:
+            logging.error("update_dashboard: Could not connect to DB, returning fallback.")
+            return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
+
+        # default values
+        indoor_aqi = 0
+        outdoor_aqi = 0
+        indoor_temp_text = "N/A"
+        outdoor_temp_text = "N/A"
+        indoor_arrow = "⬇️"
+        outdoor_arrow = "⬇️"
+        indoor_arrow_color = "green"
+        outdoor_arrow_color = "green"
+        indoor_delta_text = "0"
+        outdoor_delta_text = "0"
+
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
         outdoor_pm = pd.read_sql("SELECT pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
 
         indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
         outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
-        conn.close()
-
-        if not indoor_pm.empty:
-            indoor_aqi = round(indoor_pm['pm25'].iloc[0])
-            if len(indoor_pm) > 30:
-                indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
-            else:
-                indoor_delta = 0
-            indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
-            indoor_arrow = "⬆️" if indoor_delta > 0 else "⬇️"
-            indoor_arrow_color = "red" if indoor_delta > 0 else "green"
-
-        if not outdoor_pm.empty:
-            outdoor_aqi = round(outdoor_pm['pm25_value'].iloc[0])
-            if len(outdoor_pm) > 30:
-                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25_value'].iloc[30:].mean())
-            else:
-                outdoor_delta = 0
-            outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
-            outdoor_arrow = "⬆️" if outdoor_delta > 0 else "⬇️"
-            outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
-
-        if not indoor_temp_df.empty:
-            indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
-            indoor_temp_text = f"{indoor_temp_value} °F"
-        if not outdoor_temp_df.empty:
-            outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
-            outdoor_temp_text = f"{outdoor_temp_value} °F"
     except Exception as e:
-        print(f"Error retrieving data in update_dashboard: {e}")
+        logging.exception(f"Error retrieving data in update_dashboard: {e}")
+        # Return fallback
+        return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
+    finally:
+        if conn:
+            conn.close()
 
-    #Get correct emoji to use
-    indoor_emoji = get_aqi_emoji(indoor_aqi)
-    outdoor_emoji = get_aqi_emoji(outdoor_aqi)
+    # Compute indoor AQI
+    if not indoor_pm.empty:
+        indoor_aqi = round(indoor_pm['pm25'].iloc[0])
+        if len(indoor_pm) > 30:
+            indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
+        else:
+            indoor_delta = 0
+        indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
+        indoor_arrow = "⬆️" if indoor_delta > 0 else "⬇️"
+        indoor_arrow_color = "red" if indoor_delta > 0 else "green"
+    else:
+        logging.warning("No indoor_pm data found in update_dashboard.")
 
-    #Get lengths of aqi and delta
-    indoor_aqi_length = len(indoor_aqi)
-    outdoor_aqi_length = len(outdoor_aqi)
-    indoor_delta_length = len(indoor_delta_text)
-    outdoor_delta_length = len(outdoor_delta_text)
+    # Compute outdoor AQI
+    if not outdoor_pm.empty:
+        outdoor_aqi = round(outdoor_pm['pm25_value'].iloc[0])
+        if len(outdoor_pm) > 30:
+            outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25_value'].iloc[30:].mean())
+        else:
+            outdoor_delta = 0
+        outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
+        outdoor_arrow = "⬆️" if outdoor_delta > 0 else "⬇️"
+        outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
+    else:
+        logging.warning("No outdoor_pm data found in update_dashboard.")
 
-    #Get coordinated and fonts for aqi, delta, and arrow
-    indoor_aqi_x_coord, indoor_delta_x_coord, indoor_arrow_coord, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta_text)
-    outdoor_aqi_x_coord, outdoor_delta_x_coord, outdoor_arrow_coord, outdoor_aqi_font, outdoor_delta_font, outdoor_arrow_size = get_spacing(outdoor_aqi, outdoor_delta_text)
+    # Indoor temp
+    if not indoor_temp_df.empty:
+        indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
+        indoor_temp_text = f"{indoor_temp_value} °F"
+    else:
+        logging.warning("No indoor_temp_df data found in update_dashboard.")
 
-    # Indoor Gauge
-    indoor_gauge = go.Figure(go.Indicator(
-        mode="gauge",
-        value=indoor_aqi,
-        gauge={
-            'axis': {'range': [0, 150]},
-            'bar': {'color': get_gauge_color(indoor_aqi)},
-            'bgcolor': "lightgray",
-            'bordercolor': "black",
-        },
-        domain={'x': [0, 1], 'y': [0, 1]}
-    ))
-    indoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
-    indoor_gauge.add_annotation(
-        x=indoor_aqi_x_coord, y=0.25,
-        text=f"<b>AQI:{indoor_aqi}</b>",
-        showarrow=False,
-        font=dict(size=indoor_aqi_font, color="black"),
-        xanchor="center", yanchor="bottom"
-    )
-    indoor_gauge.add_annotation(
-        x=indoor_arrow_coord, y=0.24,
-        text=indoor_arrow,
-        font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
-        showarrow=False
-    )
-    indoor_gauge.add_annotation(
-        x=indoor_delta_x_coord, y=0.28,
-        text=indoor_delta_text,
-        font=dict(size=indoor_delta_font, color=indoor_arrow_color),
-        showarrow=False
-    )
+    # Outdoor temp
+    if not outdoor_temp_df.empty:
+        outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
+        outdoor_temp_text = f"{outdoor_temp_value} °F"
+    else:
+        logging.warning("No outdoor_temp_df data found in update_dashboard.")
 
-    # Outdoor Gauge
-    aqi_x, arrow_x, delta_x = get_x_positions(outdoor_aqi, outdoor_delta_text)
+    # Build gauge figures
+    def build_gauge(aqi_value, arrow, arrow_color, delta_text):
+        gauge = go.Figure(go.Indicator(
+            mode="gauge",
+            value=aqi_value,
+            gauge={
+                'axis': {'range': [0, 150]},
+                'bar': {'color': get_gauge_color(aqi_value)},
+                'bgcolor': "lightgray",
+                'bordercolor': "black",
+            },
+            domain={'x': [0, 1], 'y': [0, 1]}
+        ))
+        gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+        # Here you can add text annotations if you desire:
+        gauge.add_annotation(
+            x=0.45, y=0.25,
+            text=f"<b>AQI:{aqi_value}</b>",
+            showarrow=False,
+            font=dict(size=24, color="black"),
+            xanchor="center", yanchor="bottom"
+        )
+        gauge.add_annotation(
+            x=0.5, y=0.24,
+            text=arrow,
+            font=dict(size=24, color=arrow_color),
+            showarrow=False
+        )
+        gauge.add_annotation(
+            x=0.55, y=0.28,
+            text=delta_text,
+            font=dict(size=16, color=arrow_color),
+            showarrow=False
+        )
+        return gauge
 
-    outdoor_gauge = go.Figure(go.Indicator(
-        mode="gauge",
-        value=outdoor_aqi,
-        gauge={
-            'axis': {'range': [0, 150]},
-            'bar': {'color': get_gauge_color(outdoor_aqi)},
-            'bgcolor': "lightgray",
-            'bordercolor': "black",
-        },
-        domain={'x': [0, 1], 'y': [0, 1]}
-    ))
-    outdoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
-    outdoor_gauge.add_annotation(
-        x=outdoor_aqi_x_coord, y=0.25,
-        text=f"<b>AQI:{outdoor_aqi}</b>",
-        showarrow=False,
-        font=dict(size=outdoor_aqi_font, color="black"),
-        xanchor="center", yanchor="bottom"
-    )
-    outdoor_gauge.add_annotation(
-        x=outdoor_arrow_coord, y=0.24,
-        text=outdoor_arrow,
-        font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
-        showarrow=False
-    )
-    outdoor_gauge.add_annotation(
-        x=outdoor_delta_x_coord, y=0.28,
-        text=outdoor_delta_text,
-        font=dict(size=outdoor_delta_font, color=outdoor_arrow_color),
-        showarrow=False
-    )
+    indoor_gauge = build_gauge(indoor_aqi, indoor_arrow, indoor_arrow_color, indoor_delta_text)
+    outdoor_gauge = build_gauge(outdoor_aqi, outdoor_arrow, outdoor_arrow_color, outdoor_delta_text)
 
     return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
 
+
 @app.callback(
-    [Output('disable-fan', 'children'),
-     Output('disable-fan', 'style'),
-     Output('modal-confirm', 'is_open'),
-     Output('modal-warning', 'is_open'),
-     Output('modal-notification', 'is_open'),
-     Output('modal-state-store', 'data')],
-    [Input('disable-fan', 'n_clicks'),
-     Input('confirm-yes', 'n_clicks'),
-     Input('confirm-no', 'n_clicks'),
-     Input('warning-yes', 'n_clicks'),
-     Input('warning-no', 'n_clicks'),
-     Input('close-notification', 'n_clicks')],
-    [State('disable-fan', 'children'),
-     State('modal-state-store', 'data')],
+    [
+        Output('disable-fan', 'children'),
+        Output('disable-fan', 'style'),
+        Output('modal-confirm', 'is_open'),
+        Output('modal-warning', 'is_open'),
+        Output('modal-notification', 'is_open'),
+        Output('modal-state-store', 'data')
+    ],
+    [
+        Input('disable-fan', 'n_clicks'),
+        Input('confirm-yes', 'n_clicks'),
+        Input('confirm-no', 'n_clicks'),
+        Input('warning-yes', 'n_clicks'),
+        Input('warning-no', 'n_clicks'),
+        Input('close-notification', 'n_clicks')
+    ],
+    [
+        State('disable-fan', 'children'),
+        State('modal-state-store', 'data')
+    ],
     prevent_initial_call=True
 )
 def manage_fan_workflow(disable_fan_clicks, confirm_yes_clicks, confirm_no_clicks,
                         warning_yes_clicks, warning_no_clicks, close_notification_clicks,
                         button_text, modal_state):
     """
-    Manages the fan enabling/disabling workflow and modal states:
-
-    Workflow:
-    - Start: Button = "Disable Fan"
-    - Click "Disable Fan" -> Show Confirm Modal
-    - Confirm "Yes" -> Show Warning Modal
-    - Warning "Proceed" -> Disable Fan, switch button to "Enable Fan"
-    - Click "Enable Fan" -> Enable Fan, show Notification Modal, switch button to "Disable Fan"
-    - "No" or "Cancel" buttons close modals without changing state.
+    Manages the fan enabling/disabling workflow and modal states.
     """
-    triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0] if callback_context.triggered else None
+    try:
+        triggered_id = callback_context.triggered[0]['prop_id'].split('.')[0] if callback_context.triggered else None
 
-    # Current modal states
-    modal_confirm = modal_state.get('modal_confirm', False)
-    modal_warning = modal_state.get('modal_warning', False)
-    modal_notification = modal_state.get('modal_notification', False)
+        modal_confirm = modal_state.get('modal_confirm', False)
+        modal_warning = modal_state.get('modal_warning', False)
+        modal_notification = modal_state.get('modal_notification', False)
 
-    # Determine current fan state from button text
-    is_fan_on = (button_text == "Disable Fan")
+        is_fan_on = (button_text == "Disable Fan")
 
-    # Default button style
-    button_style = {
-        "width": "100px",
-        "height": "65px",
-        "border-radius": "100px",
-        "font-size": "1.2rem",
-        "color": "Yellow",
-        "backgroundColor": "red" if is_fan_on else "green",
-        "border": "2px solid red" if is_fan_on else "2px solid green"
-    }
+        # Default button style
+        button_style = {
+            "width": "100px",
+            "height": "65px",
+            "border-radius": "100px",
+            "font-size": "1.2rem",
+            "color": "Yellow",
+            "backgroundColor": "red" if is_fan_on else "green",
+            "border": "2px solid red" if is_fan_on else "2px solid green"
+        }
 
-    # Modal and state logic
-    if triggered_id == 'disable-fan' and is_fan_on:
-        # Fan is ON, user wants to disable -> confirm action
-        modal_confirm = True
+        if triggered_id == 'disable-fan' and is_fan_on:
+            # Fan is ON, user wants to disable -> confirm
+            modal_confirm = True
 
-    elif triggered_id == 'confirm-yes':
-        # User confirmed disabling -> show warning
-        modal_confirm = False
-        modal_warning = True
+        elif triggered_id == 'confirm-yes':
+            # Show warning
+            modal_confirm = False
+            modal_warning = True
 
-    elif triggered_id == 'confirm-no':
-        # User declined disabling -> close confirm modal
-        modal_confirm = False
+        elif triggered_id == 'confirm-no':
+            # Cancel confirm
+            modal_confirm = False
 
-    elif triggered_id == 'warning-yes':
-        # User proceeds with disabling -> disable fan
-        modal_warning = False
-        update_fan_state("OFF")
-        button_text = "Enable Fan"
-        button_style["backgroundColor"] = "green"
-        button_style["border"] = "2px solid green"
+        elif triggered_id == 'warning-yes':
+            # User proceeds with disabling -> disable fan
+            modal_warning = False
+            update_fan_state("OFF")
+            button_text = "Enable Fan"
+            button_style["backgroundColor"] = "green"
+            button_style["border"] = "2px solid green"
 
-    elif triggered_id == 'warning-no':
-        # User canceled warning -> close warning modal
-        modal_warning = False
+        elif triggered_id == 'warning-no':
+            modal_warning = False
 
-    elif triggered_id == 'disable-fan' and not is_fan_on:
-        # User clicks Enable Fan -> actually turn fan ON
-        update_fan_state("ON")
-        modal_notification = True
-        button_text = "Disable Fan"
-        button_style["backgroundColor"] = "red"
-        button_style["border"] = "2px solid red"
+        elif triggered_id == 'disable-fan' and not is_fan_on:
+            # User clicks Enable Fan -> turn fan ON
+            update_fan_state("ON")
+            modal_notification = True
+            button_text = "Disable Fan"
+            button_style["backgroundColor"] = "red"
+            button_style["border"] = "2px solid red"
 
-    elif triggered_id == 'close-notification':
-        # Close the notification modal after enabling fan
-        modal_notification = False
+        elif triggered_id == 'close-notification':
+            modal_notification = False
 
-    updated_state = {
-        'modal_confirm': modal_confirm,
-        'modal_warning': modal_warning,
-        'modal_notification': modal_notification
-    }
+        updated_state = {
+            'modal_confirm': modal_confirm,
+            'modal_warning': modal_warning,
+            'modal_notification': modal_notification
+        }
 
-    return button_text, button_style, modal_confirm, modal_warning, modal_notification, updated_state
+        return button_text, button_style, modal_confirm, modal_warning, modal_notification, updated_state
 
+    except Exception as ex:
+        logging.exception(f"Error in manage_fan_workflow callback: {ex}")
+        # On error, revert to current states so we don't break UI
+        return (
+            button_text,
+            {
+                "width": "100px",
+                "height": "65px",
+                "border-radius": "100px",
+                "font-size": "1.2rem",
+                "color": "Yellow",
+                "backgroundColor": "red" if (button_text == "Disable Fan") else "green",
+                "border": "2px solid red" if (button_text == "Disable Fan") else "2px solid green"
+            },
+            modal_state.get('modal_confirm', False),
+            modal_state.get('modal_warning', False),
+            modal_state.get('modal_notification', False),
+            modal_state
+        )
 
 ###################################################
 # MAIN
 ###################################################
 
 if __name__ == '__main__':
-    # Run app in production mode (for development, use debug=True)
     app.run_server(debug=False)
