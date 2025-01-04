@@ -18,24 +18,6 @@ except sqlite3.Error as e:
     sys.exit(1)
 
 ###########################################################
-# Create Tables (If Not Exists)
-###########################################################
-try:
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS system_control (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            filter_state TEXT
-        )
-    ''')
-    # Commit immediately after successful DDL
-    connection.commit()
-except sqlite3.Error as e:
-    print(f"Error creating table 'system_control': {str(e)}")
-    # If creation of table fails, we can't proceed
-    sys.exit(1)
-
-###########################################################
 # Data Storage
 ###########################################################
 pm25_values = []
