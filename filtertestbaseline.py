@@ -102,30 +102,6 @@ def calculate_average(values):
         return 0.0
     return sum(values) / len(values)
 
-def create_baseline_table():
-    conn = None
-    try:
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_file)
-        cursor = conn.cursor()
-
-        # Create the baseline table if it doesn't already exist
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS baseline (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT,
-                baseline_value REAL
-            )
-        ''')
-
-        # Commit the changes
-        conn.commit()
-    except sqlite3.Error as e:
-        print(f"Database error in create_baseline_table: {str(e)}")
-    finally:
-        if conn:
-            conn.close()
-
 def insert_baseline_value(average_value):
     conn = None
     try:
@@ -158,13 +134,10 @@ def main():
     # Step 3: Calculate the average of those values
     average_pm25 = calculate_average(pm25_values)
 
-    # Step 4: Create the baseline table if it doesn't exist
-    create_baseline_table()
-
-    # Step 5: Check if we need to adjust the baseline value before inserting
+    # Step 4: Check if we need to adjust the baseline value before inserting
     baseline = check_baseline_value(average_pm25)
 
-    # Step 6: Insert the (possibly adjusted) baseline value
+    # Step 5: Insert the (possibly adjusted) baseline value
     insert_baseline_value(baseline)
 
 if __name__ == '__main__':
