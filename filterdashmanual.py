@@ -45,72 +45,6 @@ def get_db_connection():
         logging.error(f"Database connection error: {e}")
         raise
 
-def create_tables():
-    """
-    Create/upgrade tables. If there's an error, we log it.
-    """
-    create_tables_script = """
-    CREATE TABLE IF NOT EXISTS Indoor (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        pm25 REAL,
-        temperature REAL,
-        humidity REAL
-    );
-
-    CREATE TABLE IF NOT EXISTS user_control (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        user_input TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS filter_state (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        filter_state TEXT CHECK (filter_state IN ('ON','OFF'))
-    );
-
-    CREATE TABLE IF NOT EXISTS Outdoor (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        pm25_value REAL,
-        temperature REAL,
-        humidity REAL,
-        wifi_strength REAL
-    );
-
-    CREATE TABLE IF NOT EXISTS processed_events (
-        processed_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id INTEGER NOT NULL,
-        action TEXT NOT NULL,
-        processed_timestamp TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS reminders (
-        reminder_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id INTEGER NOT NULL,
-        reminder_time TEXT NOT NULL,
-        reminder_type TEXT NOT NULL
-    );
-    """
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.executescript(create_tables_script)
-        conn.commit()
-        logging.info("Tables created or verified successfully.")
-    except sqlite3.Error as e:
-        logging.error(f"Error creating tables: {e}")
-    except Exception as ex:
-        logging.exception(f"Unexpected error creating tables: {ex}")
-    finally:
-        if conn:
-            conn.close()
-
-# Initialize / upgrade tables on startup
-create_tables()
-
 ###################################################
 # HELPER FUNCTIONS (WITH ERROR HANDLING)
 ###################################################
@@ -133,20 +67,91 @@ def encode_image(image_path):
 
 def get_aqi_emoji(aqi):
     """
-    Simplified placeholder for example.
-    Could add more advanced logic to map AQI to emoticons.
+    Return a corresponding emoji image based on AQI value.
+
+    Parameters:
+        aqi (int): AQI value.
+
+    Returns:
+        str: base64-encoded image string for the corresponding emoji.
     """
-    return "😷"
+    try:
+        if aqi <= 25:
+            return encode_image(EMOJI_PATHS["good"])
+        elif 26 <= aqi <= 50:
+            return encode_image(EMOJI_PATHS["moderate"])
+        elif 51 <= aqi <= 75:
+            return encode_image(EMOJI_PATHS["unhealthy_sensitive"])
+        elif 76 <= aqi <= 100:
+            return encode_image(EMOJI_PATHS["unhealthy"])
+        elif 101 <= aqi <= 125:
+            return encode_image(EMOJI_PATHS["very_unhealthy"])
+        else:
+            return encode_image(EMOJI_PATHS["hazardous"])
+    except Exception as e:
+        print(f"Error selecting emoji for AQI {aqi}: {e}")
+        return ""
+
 
 def get_gauge_color(aqi):
-    if aqi < 50:
+    """
+    Determine the gauge bar color based on AQI level.
+
+    Parameters:
+        aqi (int): Current AQI value.
+
+    Returns:
+        str: Hex or color name string.
+    """
+    if aqi <= 25:
         return "green"
-    elif aqi < 100:
+    elif 26 <= aqi <= 50:
         return "yellow"
-    elif aqi < 150:
+    elif 51 <= aqi <= 75:
         return "orange"
-    else:
+    elif 76 <= aqi <= 100:
+        return "#ff6600"
+    elif 101 <= aqi <= 125:
         return "red"
+    else:
+        return "#8b0000"
+
+def get_spacing(aqi_length, delta_length):
+    # Predefined values for each combination of aqi_length and delta_length
+    spacing_values = {
+        (1, 1): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (1, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (1, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (1, 4): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (2, 1): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (2, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (2, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (2, 4): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (3, 1): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (3, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (3, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (3, 4): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (4, 1): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (4, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (4, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+        (4, 4): {"aqi_x_coord": 0.4, "delta_x_coord": 0.6, "arrow_coord": 0.5, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+    }
+
+    # Retrieve the corresponding values or raise an error for invalid inputs
+    key = (aqi_length, delta_length)
+    if key in spacing_values:
+        values = spacing_values[key]
+        return (
+            values["aqi_x_coord"],
+            values["delta_x_coord"],
+            values["arrow_coord"],
+            values["aqi_font"],
+            values["delta_font"],
+            values["arrow_size"],
+        )
+    else:
+        raise ValueError(f"Invalid combination of aqi_length ({aqi_length}) and delta_length ({delta_length}).")
+
 
 def get_fallback_gauge():
     """
@@ -182,6 +187,31 @@ def get_last_filter_state():
         return (None, "OFF")
     except Exception as ex:
         logging.exception(f"Unexpected error in get_last_filter_state: {ex}")
+        return (None, "OFF")
+    finally:
+        if conn:
+            conn.close()
+
+def get_last_system_state():
+    """
+    Returns (id, filter_state) of the most recent entry in system_control.
+    Returns (None, 'OFF') if not found or if there's an error.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, system_input FROM system_control ORDER BY id DESC LIMIT 1')
+        result = cursor.fetchone()
+        if not result:
+            logging.info("No rows found in system_control table; returning OFF as default.")
+            return (None, "OFF")
+        return result
+    except sqlite3.Error as e:
+        logging.error(f"Error fetching last_system_state: {e}")
+        return (None, "OFF")
+    except Exception as ex:
+        logging.exception(f"Unexpected error in get_last_system_state: {ex}")
         return (None, "OFF")
     finally:
         if conn:
@@ -871,7 +901,7 @@ def handle_filter_state_event(n_intervals,
         status_message = "Monitoring filter state..."
         updated_alert_shown = alert_shown
 
-        last_event_id, last_state = get_last_filter_state()
+        last_event_id, last_state = get_last_system_state()
         due_reminder_event_id, reminder_id = get_due_reminder()
 
         # Check if a reminder is due
