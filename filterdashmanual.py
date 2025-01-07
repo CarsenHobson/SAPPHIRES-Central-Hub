@@ -14,14 +14,28 @@ import logging
 # CONFIG & SETUP
 ###################################################
 
-DB_PATH = '/home/mainhubs/SAPPHIRES.db'  # Adjust path as needed
+DB_PATH = '/home/mainhubs/SAPPHIREStest.db'  # Adjust path as needed
+
+BACKGROUND_COLOR = "#f0f2f5"
+PRIMARY_COLOR = "#FFFFCB"
+SUCCESS_COLOR = "#28a745"
+WARNING_COLOR = "#ffc107"
+DANGER_COLOR = "#dc3545"
 
 EXTERNAL_STYLESHEETS = [
     dbc.themes.BOOTSTRAP,
     "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
 ]
 
-# Enhanced logging format includes log level
+EMOJI_PATHS = {
+    "good": "/home/mainhubs/good.png",
+    "moderate": "/home/mainhubs/moderate.png",
+    "unhealthy_sensitive": "/home/mainhubs/unhealthy_sensitive.png",
+    "unhealthy": "/home/mainhubs/unhealthy.png",
+    "very_unhealthy": "/home/mainhubs/very_unhealthy.png",
+    "hazardous": "/home/mainhubs/hazardous.png"
+}
+
 logging.basicConfig(
     filename='app.log',
     level=logging.DEBUG,
@@ -46,7 +60,7 @@ def get_db_connection():
         raise
 
 ###################################################
-# HELPER FUNCTIONS (WITH ERROR HANDLING)
+# HELPER FUNCTIONS
 ###################################################
 
 def encode_image(image_path):
@@ -68,12 +82,6 @@ def encode_image(image_path):
 def get_aqi_emoji(aqi):
     """
     Return a corresponding emoji image based on AQI value.
-
-    Parameters:
-        aqi (int): AQI value.
-
-    Returns:
-        str: base64-encoded image string for the corresponding emoji.
     """
     try:
         if aqi <= 25:
@@ -92,16 +100,9 @@ def get_aqi_emoji(aqi):
         print(f"Error selecting emoji for AQI {aqi}: {e}")
         return ""
 
-
 def get_gauge_color(aqi):
     """
     Determine the gauge bar color based on AQI level.
-
-    Parameters:
-        aqi (int): Current AQI value.
-
-    Returns:
-        str: Hex or color name string.
     """
     if aqi <= 25:
         return "green"
@@ -152,7 +153,6 @@ def get_spacing(aqi_length, delta_length):
     else:
         raise ValueError(f"Invalid combination of aqi_length ({aqi_length}) and delta_length ({delta_length}).")
 
-
 def get_fallback_gauge():
     """
     Returns a simple fallback gauge figure to display when an error occurs
@@ -170,7 +170,6 @@ def get_fallback_gauge():
 def get_last_filter_state():
     """
     Returns (id, filter_state) of the most recent entry in filter_state.
-    Returns (None, 'OFF') if not found or if there's an error.
     """
     conn = None
     try:
@@ -194,8 +193,7 @@ def get_last_filter_state():
 
 def get_last_system_state():
     """
-    Returns (id, filter_state) of the most recent entry in system_control.
-    Returns (None, 'OFF') if not found or if there's an error.
+    Returns (id, system_input) of the most recent entry in system_control.
     """
     conn = None
     try:
@@ -220,7 +218,6 @@ def get_last_system_state():
 def get_latest_user_control():
     """
     Returns the most recent user_input from user_control (e.g., 'ON' or 'OFF').
-    Returns 'OFF' if not found or error.
     """
     conn = None
     try:
@@ -250,7 +247,7 @@ def is_event_processed(event_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT event_id FROM processed_events WHERE event_id=?',(event_id,))
+        cursor.execute('SELECT event_id FROM processed_events WHERE event_id=?', (event_id,))
         result = cursor.fetchone()
         return (result is not None)
     except sqlite3.Error as e:
@@ -265,8 +262,7 @@ def is_event_processed(event_id):
 
 def record_event_as_processed(event_id, action):
     """
-    Inserts a row into processed_events with the user action or event status
-    (e.g., 'ON', 'OFF', 'REMIND_20', 'SHOWING_MODAL', etc.).
+    Inserts a row into processed_events with the user action or event status.
     """
     conn = None
     try:
@@ -289,7 +285,6 @@ def record_event_as_processed(event_id, action):
 def add_reminder(event_id, delay_minutes, reminder_type):
     """
     Inserts a future reminder for the given event_id.
-    If there's an error, logs it, no exception raised.
     """
     conn = None
     try:
@@ -311,8 +306,7 @@ def add_reminder(event_id, delay_minutes, reminder_type):
 
 def get_due_reminder():
     """
-    Return (event_id, reminder_id) if a reminder_time <= now is found.
-    If none found or on error, returns (None, None).
+    Returns (event_id, reminder_id) if a reminder_time <= now is found.
     """
     conn = None
     try:
@@ -375,20 +369,175 @@ def update_user_control_decision(state):
 
 def dashboard_layout():
     return dbc.Container([
-        # Gauges
-        dcc.Graph(id='indoor-gauge'),
-        dcc.Graph(id='outdoor-gauge'),
-        html.Div(id='indoor-temp-display'),
-        html.Div(id='outdoor-temp-display'),
+        # Title Row
+        dbc.Row([
+            dbc.Col(
+                html.H1(
+                    "CURRENT CONDITIONS",
+                    className="text-center mb-0",
+                    style={
+                        "font-family": "Roboto, sans-serif",
+                        "font-weight": "700",
+                        "color": "black",
+                        "font-size": "2.5rem",
+                        "background-color": PRIMARY_COLOR,
+                        "padding": "0",
+                        "border": "2px solid black",
+                        "border-radius": "10px 10px 0 0"
+                    }
+                ), width=12
+            )
+        ], className="g-0"),
 
-        # Interval for periodic updates
-        dcc.Interval(id='interval-component', interval=10*1000, n_intervals=0),
+        # Add the dcc.Interval component for periodic updates
+        dcc.Interval(
+            id='interval-component',
+            interval=60000,  # Update every 60 seconds
+            n_intervals=0    # Start at 0 intervals
+        ),
 
-        # Persistent Stores
-        dcc.Store(id='on-alert-shown', data=False, storage_type='local'),
-        dcc.Store(id='modal-open-state', data=False, storage_type='local'),
-        dcc.Store(id='disclaimer-modal-open', data=False, storage_type='local'),
-        dcc.Store(id='caution-modal-open', data=False, storage_type='local'),
+        # Main content row with indoor and outdoor cards
+        dbc.Row([
+            # Indoor card
+            dbc.Col(dbc.Card([
+                dbc.CardHeader("INSIDE", className="text-center mb-0",
+                               style={
+                                   "font-size": "1.5rem",
+                                   "font-weight": "700",
+                                   "color": "black",
+                                   "background": "white",
+                                   "border-bottom": "2px solid black",
+                                   "border-right": "2px solid black",
+                                   "border-left": "2px solid black"
+                               }),
+                html.Div([
+                    # AQI gauge
+                    html.Div([
+                        dcc.Graph(id="indoor-gauge", config={"displayModeBar": False})
+                    ], style={
+                        "padding": "0",
+                        "border": "2px solid black",
+                        "border-top": "none",
+                        "border-bottom": "none",
+                        "height": "115px"
+                    }),
+                    # Temperature box
+                    html.Div([
+                        html.Div([
+                            html.Div(
+                                "Temperature",
+                                className="text-center",
+                                style={
+                                    "font-size": "1.25rem",
+                                    "font-weight": "bold",
+                                    "padding-top": "10px",
+                                    "color": "black"
+                                }
+                            ),
+                            html.Div(
+                                id="indoor-temp-display",
+                                className="d-flex justify-content-center align-items-center",
+                                style={
+                                    "font-size": "1.5rem",
+                                    "color": "black",
+                                    "text-align": "center",
+                                    "margin-top": "2px"
+                                }
+                            )
+                        ], style={
+                            "width": "200px",
+                            "height": "75px",
+                            "border": "2px solid black",
+                            "position": "absolute",
+                            "bottom": "0",
+                            "left": "0",
+                            "background-color": "#D2B48C",
+                            "border-radius": "5px 7px 5px 0",
+                            "display": "flex",
+                            "flex-direction": "column",
+                            "justify-content": "center",
+                            "align-items": "center"
+                        })
+                    ], style={
+                        "padding": "30px",
+                        "border-left": "2px solid black",
+                        "border-right": "2px solid black",
+                        "border-bottom": "2px solid black",
+                        "height": "227px",
+                        "background-color": "transparent"
+                    })
+                ])
+            ]), width=6, className="p-0"),
+
+            # Outdoor card
+            dbc.Col(dbc.Card([
+                dbc.CardHeader("OUTSIDE", className="text-center mb-0",
+                               style={
+                                   "font-size": "1.5rem",
+                                   "font-weight": "700",
+                                   "color": "black",
+                                   "background": "white",
+                                   "border-bottom": "2px solid black",
+                                   "border-right": "2px solid black",
+                                   "border-left": "2px solid black"
+                               }),
+                html.Div([
+                    html.Div([
+                        dcc.Graph(id="outdoor-gauge", config={"displayModeBar": False})
+                    ], style={
+                        "padding": "0",
+                        "border": "2px solid black",
+                        "border-top": "none",
+                        "border-bottom": "none",
+                        "height": "115px"
+                    }),
+                    html.Div([
+                        html.Div([
+                            html.Div(
+                                "Temperature",
+                                className="text-center",
+                                style={
+                                    "font-size": "1.25rem",
+                                    "font-weight": "bold",
+                                    "padding-top": "10px",
+                                    "color": "black"
+                                }
+                            ),
+                            html.Div(
+                                id="outdoor-temp-display",
+                                className="d-flex justify-content-center align-items-center",
+                                style={
+                                    "font-size": "1.5rem",
+                                    "color": "black",
+                                    "text-align": "center",
+                                    "margin-top": "2px"
+                                }
+                            )
+                        ], style={
+                            "width": "200px",
+                            "height": "75px",
+                            "border": "2px solid black",
+                            "position": "absolute",
+                            "bottom": "0",
+                            "right": "0",
+                            "background-color": "#7BC8F6",
+                            "border-radius": "7px 5px 5px 0",
+                            "display": "flex",
+                            "flex-direction": "column",
+                            "justify-content": "center",
+                            "align-items": "center"
+                        })
+                    ], style={
+                        "padding": "30px",
+                        "border-left": "2px solid black",
+                        "border-right": "2px solid black",
+                        "border-bottom": "2px solid black",
+                        "height": "227px",
+                        "background-color": "transparent"
+                    })
+                ])
+            ]), width=6, className="p-0")
+        ]),
 
         # Main Air Quality Degradation Modal
         dbc.Modal(
@@ -403,10 +552,30 @@ def dashboard_layout():
                     style={'backgroundColor':'#f0f0f0','color':'black'}
                 ),
                 dbc.ModalFooter([
-                    dbc.Button("Yes", id="enable-fan-filterstate", color="success", className="me-2", style={"width":"170px"}),
-                    dbc.Button("No, keep fan off", id="keep-fan-off-filterstate", color="danger", className="me-2", style={"width":"170px"}),
-                    dbc.Button("Remind me in 20 minutes", id="remind-me-filterstate", color="secondary"),
-                    dbc.Button("Remind me in an hour", id="remind-me-hour-filterstate", color="secondary")
+                    dbc.Button(
+                        "Yes",
+                        id="enable-fan-filterstate",
+                        color="success",
+                        className="me-2",
+                        style={"width":"170px"}
+                    ),
+                    dbc.Button(
+                        "No, keep fan off",
+                        id="keep-fan-off-filterstate",
+                        color="danger",
+                        className="me-2",
+                        style={"width":"170px"}
+                    ),
+                    dbc.Button(
+                        "Remind me in 20 minutes",
+                        id="remind-me-filterstate",
+                        color="secondary"
+                    ),
+                    dbc.Button(
+                        "Remind me in an hour",
+                        id="remind-me-hour-filterstate",
+                        color="secondary"
+                    )
                 ])
             ],
             id="modal-air-quality-filterstate",
@@ -417,18 +586,32 @@ def dashboard_layout():
             keyboard=False
         ),
 
-        # Disclaimer Modal
+        # Disclaimer Modal if user chooses "No" from main modal
         dbc.Modal(
             [
-                dbc.ModalHeader(html.H4("DISCLAIMER", style={'color':'red'}), className="bg-light"),
+                dbc.ModalHeader(
+                    html.H4("DISCLAIMER", style={'color':'red'}),
+                    className="bg-light"
+                ),
                 dbc.ModalBody(
                     "Proceeding without enabling the fan may result in harmful or hazardous conditions. "
                     "Are you sure you want to keep the fan disabled?",
                     style={'backgroundColor':'#f0f0f0','color':'black'}
                 ),
                 dbc.ModalFooter([
-                    dbc.Button("Yes (not recommended)", id="disclaimer-yes", color="danger", className="me-2", style={"width":"180px"}),
-                    dbc.Button("No (Enable Fan)", id="disclaimer-no", color="secondary", style={"width":"180px"})
+                    dbc.Button(
+                        "Yes (not recommended)",
+                        id="disclaimer-yes",
+                        color="danger",
+                        className="me-2",
+                        style={"width":"180px"}
+                    ),
+                    dbc.Button(
+                        "No (Enable Fan)",
+                        id="disclaimer-no",
+                        color="secondary",
+                        style={"width":"180px"}
+                    )
                 ])
             ],
             id="modal-disclaimer",
@@ -439,14 +622,17 @@ def dashboard_layout():
             keyboard=False
         ),
 
-        # Caution Modal
+        # Caution Modal if user insists on keeping fan off after disclaimer
         dbc.Modal(
             [
-                dbc.ModalHeader(html.H4("CAUTION", style={'color':'red'}), className="bg-light"),
+                dbc.ModalHeader(
+                    html.H4("CAUTION", style={'color':'red'}),
+                    className="bg-light"
+                ),
                 dbc.ModalBody(
                     "The fan is currently turned off. Please note that you may be exposed to poor air quality. "
-                    "To enable the fan later, please come back to this dashboard and select the Enable Fan option "
-                    "when prompted.",
+                    "To enable the fan later, please come back to this dashboard and select "
+                    "the Enable Fan option when prompted.",
                     style={'backgroundColor':'#f0f0f0','color':'black'}
                 ),
                 dbc.ModalFooter([
@@ -460,29 +646,12 @@ def dashboard_layout():
             backdrop='static',
             keyboard=False
         ),
-
-        # Fan Status Box (bottom-right corner)
-        html.Div(
-            id="fan-status-box",
-            style={
-                "position": "absolute",
-                "bottom": "10px",
-                "right": "10px",
-                "padding": "8px 12px",
-                "border": "2px solid #aaa",
-                "borderRadius": "6px",
-                "backgroundColor": "#f9f9f9",
-                "fontWeight": "bold"
-            }
-        ),
-
-        html.Div(id='relay-status', className="text-center mt-4")
     ], fluid=True, className="p-4")
 
 def historical_conditions_layout():
     """
-    Constructs the historical conditions layout, showing line charts of indoor/outdoor PM readings.
-    Includes basic error handling and defaults if data is unavailable.
+    Constructs the historical conditions layout, showing line charts
+    of indoor/outdoor PM readings (second page).
     """
     conn = None
     try:
@@ -498,11 +667,12 @@ def historical_conditions_layout():
         if conn:
             conn.close()
 
-    # Convert timestamps and handle empty data gracefully
+    # Convert timestamps
     if not indoor_data.empty:
         indoor_data['timestamp'] = pd.to_datetime(indoor_data['timestamp'])
     else:
         logging.warning("No indoor data found for historical layout.")
+
     if not outdoor_data.empty:
         outdoor_data['timestamp'] = pd.to_datetime(outdoor_data['timestamp'])
     else:
@@ -528,7 +698,6 @@ def historical_conditions_layout():
             hoverinfo='x+y',
         ))
 
-    # Configure layout
     fig.update_layout(
         xaxis=dict(
             title="Time",
@@ -564,23 +733,14 @@ def historical_conditions_layout():
 ###################################################
 # INITIALIZE DASH APP
 ###################################################
-
 app = dash.Dash(
     __name__,
     external_stylesheets=EXTERNAL_STYLESHEETS,
     suppress_callback_exceptions=True,
-    meta_tags=[{"name":"viewport","content":"width=device-width,initial-scale=1"}]
+    meta_tags=[{"name": "viewport", "content": "width=device-width,initial-scale=1"}]
 )
 
-app.layout = html.Div(
-    style={"overflow":"hidden","height":"100vh"},
-    children=[
-        dcc.Location(id='url', refresh=False),
-        html.Div(id='page-content', style={"outline":"none"})
-    ]
-)
-
-# Custom index string
+# Custom index string to handle swipes (left/right) for navigation
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -606,10 +766,13 @@ app.index_string = '''
             document.addEventListener('touchend',function(e){endX=e.changedTouches[0].screenX;handleSwipe();},false);
             function handleSwipe(){
                 const deltaX=endX-startX;
+                // Swipe right -> Go to '/'
                 if(deltaX>50){
                     window.history.pushState({},"","/");
                     window.dispatchEvent(new PopStateEvent('popstate'));
-                }else if(deltaX<-50){
+                }
+                // Swipe left -> Go to '/historical'
+                else if(deltaX<-50){
                     window.history.pushState({},"","/historical");
                     window.dispatchEvent(new PopStateEvent('popstate'));
                 }
@@ -622,20 +785,17 @@ app.index_string = '''
 </html>
 '''
 
-###################################################
-# PAGE ROUTING
-###################################################
-@app.callback(
-    Output('page-content','children'),
-    Input('url','pathname')
+app.layout = html.Div(
+    style={"overflow": "hidden", "height": "100vh"},
+    children=[
+        dcc.Location(id='url', refresh=False),
+        dcc.Store(id='on-alert-shown', data=False),  # Add the missing store component
+        dcc.Store(id='modal-open-state', data=False),  # For modal tracking
+        dcc.Store(id='disclaimer-modal-open', data=False),
+        dcc.Store(id='caution-modal-open', data=False),
+        html.Div(id='page-content', style={"outline": "none"})
+    ]
 )
-def display_page(pathname):
-    if pathname == '/':
-        return dashboard_layout()
-    elif pathname == '/historical':
-        return historical_conditions_layout()
-    else:
-        return html.Div("Page not found", className="text-center")
 
 ###################################################
 # DASHBOARD UPDATE CALLBACK
@@ -655,8 +815,6 @@ def update_dashboard(n):
     updates:
         - Indoor/Outdoor AQI gauges
         - Indoor/Outdoor temperature displays
-
-    If an error occurs, logs it and provides fallback figures / text.
     """
     try:
         conn = get_db_connection()
@@ -670,7 +828,7 @@ def update_dashboard(n):
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     try:
-        # Default fallback values
+        # Defaults
         indoor_aqi = 0
         outdoor_aqi = 0
         indoor_temp_text = "N/A"
@@ -682,13 +840,12 @@ def update_dashboard(n):
         indoor_delta_text = "0"
         outdoor_delta_text = "0"
 
-        # Query data
+        # Query last 60 entries of PM data
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        outdoor_pm = pd.read_sql("SELECT pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
         indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
         outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
 
-        # Close DB connection
         conn.close()
 
         # Indoor AQI
@@ -706,9 +863,9 @@ def update_dashboard(n):
 
         # Outdoor AQI
         if not outdoor_pm.empty:
-            outdoor_aqi = round(outdoor_pm['pm25_value'].iloc[0])
+            outdoor_aqi = round(outdoor_pm['pm25'].iloc[0])
             if len(outdoor_pm) > 30:
-                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25_value'].iloc[30:].mean())
+                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25'].iloc[30:].mean())
             else:
                 outdoor_delta = 0
             outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
@@ -721,29 +878,16 @@ def update_dashboard(n):
         if not indoor_temp_df.empty:
             indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
             indoor_temp_text = f"{indoor_temp_value} °F"
-        else:
-            logging.warning("update_dashboard: No indoor_temp_df data found.")
 
         # Outdoor temperature
         if not outdoor_temp_df.empty:
             outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
             outdoor_temp_text = f"{outdoor_temp_value} °F"
-        else:
-            logging.warning("update_dashboard: No outdoor_temp_df data found.")
-
-        # Helper function to position text
-        def get_x_positions(aqi, delta_text, base_x=0.45, char_spacing=0.02):
-            aqi_length = len(str(aqi))
-            delta_length = len(delta_text)
-            adjusted_base_x = base_x - (aqi_length * char_spacing)
-
-            aqi_x = adjusted_base_x
-            arrow_x = aqi_x + (aqi_length * char_spacing * 1.5)
-            delta_x = aqi_x + (aqi_length * char_spacing * 2)
-            return aqi_x, arrow_x, delta_x
-
-        # Build Indoor Gauge
-        aqi_x, arrow_x, delta_x = get_x_positions(indoor_aqi, indoor_delta_text)
+        
+        #Get Indoor spacing
+        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(len(indoor_aqi),
+                                                                                                len(indoor_delta))
+        #Indoor Gauge
         indoor_gauge = go.Figure(go.Indicator(
             mode="gauge",
             value=indoor_aqi,
@@ -757,27 +901,28 @@ def update_dashboard(n):
         ))
         indoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
         indoor_gauge.add_annotation(
-            x=aqi_x, y=0.25,
+            x=aqi_x_coord, y=0.25,
             text=f"<b>AQI:{indoor_aqi}</b>",
             showarrow=False,
-            font=dict(size=30, color="black"),
+            font=dict(size=aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
         indoor_gauge.add_annotation(
-            x=arrow_x, y=0.24,
+            x=arrow_coord, y=0.24,
             text=indoor_arrow,
-            font=dict(size=30, color=indoor_arrow_color),
+            font=dict(size=arrow_size, color=indoor_arrow_color),
             showarrow=False
         )
         indoor_gauge.add_annotation(
-            x=delta_x, y=0.28,
+            x=delta_x_coord, y=0.28,
             text=indoor_delta_text,
-            font=dict(size=20, color=indoor_arrow_color),
+            font=dict(size=delta_font, color=indoor_arrow_color),
             showarrow=False
         )
-
-        # Build Outdoor Gauge
-        aqi_x, arrow_x, delta_x = get_x_positions(outdoor_aqi, outdoor_delta_text)
+        
+        #Get outdoor spacing
+        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(len(outdoor_aqi), len(outdoor_delta))
+        #Outdoor gauge
         outdoor_gauge = go.Figure(go.Indicator(
             mode="gauge",
             value=outdoor_aqi,
@@ -791,31 +936,29 @@ def update_dashboard(n):
         ))
         outdoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
         outdoor_gauge.add_annotation(
-            x=aqi_x, y=0.25,
+            x=aqi_x_coord, y=0.25,
             text=f"<b>AQI:{outdoor_aqi}</b>",
             showarrow=False,
-            font=dict(size=30, color="black"),
+            font=dict(size=aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
         outdoor_gauge.add_annotation(
-            x=arrow_x, y=0.24,
+            x=arrow_coord, y=0.24,
             text=outdoor_arrow,
-            font=dict(size=30, color=outdoor_arrow_color),
+            font=dict(size=arrow_size, color=outdoor_arrow_color),
             showarrow=False
         )
         outdoor_gauge.add_annotation(
-            x=delta_x, y=0.28,
+            x=delta_x_coord, y=0.28,
             text=outdoor_delta_text,
-            font=dict(size=20, color=outdoor_arrow_color),
+            font=dict(size=delta_font, color=outdoor_arrow_color),
             showarrow=False
         )
 
-        # Return figures and text
         return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
 
     except Exception as ex:
         logging.exception(f"Error in update_dashboard callback: {ex}")
-        # Provide fallback
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
 ###################################################
@@ -841,7 +984,6 @@ def update_fan_status(n):
             return html.Span("Fan is currently OFF", style={"color": "red"})
     except Exception as ex:
         logging.exception(f"Error in update_fan_status: {ex}")
-        # Fallback text
         return html.Span("Fan status unknown", style={"color": "gray"})
 
 ###################################################
@@ -849,32 +991,32 @@ def update_fan_status(n):
 ###################################################
 @app.callback(
     [
-        Output("modal-air-quality-filterstate","is_open"),
-        Output("on-alert-shown","data"),
-        Output("relay-status","children"),
-        Output("modal-disclaimer","is_open"),
-        Output("modal-caution","is_open"),
-        Output("modal-open-state","data"),
-        Output("disclaimer-modal-open","data"),
-        Output("caution-modal-open","data")
+        Output("modal-air-quality-filterstate", "is_open"),
+        Output("on-alert-shown", "data"),
+        Output("modal-disclaimer", "is_open"),
+        Output("modal-caution", "is_open"),
+        Output("modal-open-state", "data"),
+        Output("disclaimer-modal-open", "data"),
+        Output("caution-modal-open", "data")
     ],
     [
-        Input("interval-component","n_intervals"),
-        Input("enable-fan-filterstate","n_clicks"),
-        Input("keep-fan-off-filterstate","n_clicks"),
-        Input("remind-me-filterstate","n_clicks"),
-        Input("remind-me-hour-filterstate","n_clicks"),
-        Input("disclaimer-yes","n_clicks"),
-        Input("disclaimer-no","n_clicks"),
-        Input("caution-close","n_clicks")
+        Input("interval-component", "n_intervals"),
+        Input("enable-fan-filterstate", "n_clicks"),
+        Input("keep-fan-off-filterstate", "n_clicks"),
+        Input("remind-me-filterstate", "n_clicks"),
+        Input("remind-me-hour-filterstate", "n_clicks"),
+        Input("disclaimer-yes", "n_clicks"),
+        Input("disclaimer-no", "n_clicks"),
+        Input("caution-close", "n_clicks")
     ],
     [
-        State("on-alert-shown","data"),
-        State("modal-open-state","data"),
-        State("disclaimer-modal-open","data"),
-        State("caution-modal-open","data")
+        State("on-alert-shown", "data"),
+        State("modal-open-state", "data"),
+        State("disclaimer-modal-open", "data"),
+        State("caution-modal-open", "data")
     ]
 )
+
 def handle_filter_state_event(n_intervals,
                               enable_clicks,
                               keep_off_clicks,
@@ -898,7 +1040,6 @@ def handle_filter_state_event(n_intervals,
         modal_open = modal_open_state
         disclaimer_open = disclaimer_open_state
         caution_open = caution_open_state
-        status_message = "Monitoring filter state..."
         updated_alert_shown = alert_shown
 
         last_event_id, last_state = get_last_system_state()
@@ -911,7 +1052,6 @@ def handle_filter_state_event(n_intervals,
             caution_open = False
             updated_alert_shown = True
             remove_reminder(reminder_id)
-            status_message = "Reminder due. Showing modal."
 
         # If interval triggered, filter_state=ON, and event not processed
         elif triggered_id == "interval-component" and last_state == "ON" and last_event_id:
@@ -920,7 +1060,6 @@ def handle_filter_state_event(n_intervals,
                 disclaimer_open = False
                 caution_open = False
                 updated_alert_shown = True
-                status_message = f"Filter ON detected. Event {last_event_id}. User attention required."
                 record_event_as_processed(last_event_id, "SHOWING_MODAL")
 
         # Handle user clicks
@@ -929,8 +1068,6 @@ def handle_filter_state_event(n_intervals,
             modal_open = False
             disclaimer_open = False
             caution_open = False
-            status_message = "Fan enabled by user choice."
-
             if last_event_id:
                 record_event_as_processed(last_event_id, "ON")
 
@@ -938,7 +1075,6 @@ def handle_filter_state_event(n_intervals,
             modal_open = False
             disclaimer_open = True
             caution_open = False
-            status_message = "User chose to keep fan off, showing disclaimer."
 
         elif triggered_id == "remind-me-filterstate":
             modal_open = False
@@ -947,7 +1083,6 @@ def handle_filter_state_event(n_intervals,
             if last_event_id:
                 add_reminder(last_event_id, 20, "20 minutes")
                 record_event_as_processed(last_event_id, "REMIND_20")
-            status_message = "Reminder set for 20 minutes."
 
         elif triggered_id == "remind-me-hour-filterstate":
             modal_open = False
@@ -956,14 +1091,11 @@ def handle_filter_state_event(n_intervals,
             if last_event_id:
                 add_reminder(last_event_id, 60, "1 hour")
                 record_event_as_processed(last_event_id, "REMIND_60")
-            status_message = "Reminder set for 1 hour."
 
         elif triggered_id == "disclaimer-yes":
             modal_open = False
             disclaimer_open = False
             caution_open = True
-            status_message = "User insisted on keeping fan off, showing caution."
-
             update_user_control_decision("OFF")
             if last_event_id:
                 record_event_as_processed(last_event_id, "OFF")
@@ -973,8 +1105,6 @@ def handle_filter_state_event(n_intervals,
             modal_open = False
             disclaimer_open = False
             caution_open = False
-            status_message = "User changed mind at disclaimer, fan enabled."
-
             if last_event_id:
                 record_event_as_processed(last_event_id, "ON")
 
@@ -982,12 +1112,10 @@ def handle_filter_state_event(n_intervals,
             modal_open = False
             disclaimer_open = False
             caution_open = False
-            status_message = "Caution modal closed, user aware fan is off."
 
         return (
             modal_open,
             updated_alert_shown,
-            status_message,
             disclaimer_open,
             caution_open,
             modal_open,
@@ -996,7 +1124,6 @@ def handle_filter_state_event(n_intervals,
         )
     except Exception as ex:
         logging.exception(f"Error in handle_filter_state_event callback: {ex}")
-        # If something goes wrong, just return the states unchanged
         return (
             modal_open_state,
             alert_shown,
@@ -1011,5 +1138,24 @@ def handle_filter_state_event(n_intervals,
 ###################################################
 # RUN
 ###################################################
+# Other imports and setup code above remain the same.
+
+# Adjustments for routing and layout:
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname')
+)
+def display_page(pathname):
+    """
+    Renders the appropriate layout based on the URL path.
+    """
+    if pathname == '/':
+        return dashboard_layout()
+    elif pathname == '/historical':
+        return historical_conditions_layout()
+    else:
+        return html.Div("404 Page Not Found", className="text-center mt-4")
+
+# Running the app
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
