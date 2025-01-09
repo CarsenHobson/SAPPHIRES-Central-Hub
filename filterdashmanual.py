@@ -889,6 +889,8 @@ def update_dashboard(n):
         delta_digits_indoor = len(str(abs(int(indoor_delta_text))))  # Delta digits for indoor
         delta_digits_outdoor = len(str(abs(int(outdoor_delta_text))))  # Delta digits for outdoor
 
+        max_aqi = max(indoor_aqi, outdoor_aqi, 100)
+        
         #Get Indoor spacing
         aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(indoor_digits, delta_digits_indoor)
         #Indoor Gauge
@@ -896,7 +898,7 @@ def update_dashboard(n):
             mode="gauge",
             value=indoor_aqi,
             gauge={
-                'axis': {'range': [0, 150]},
+                'axis': {'range': [0, max_aqi]},
                 'bar': {'color': get_gauge_color(indoor_aqi)},
                 'bgcolor': "lightgray",
                 'bordercolor': "black",
@@ -931,7 +933,7 @@ def update_dashboard(n):
             mode="gauge",
             value=outdoor_aqi,
             gauge={
-                'axis': {'range': [0, 150]},
+                'axis': {'range': [0, max_aqi]},
                 'bar': {'color': get_gauge_color(outdoor_aqi)},
                 'bgcolor': "lightgray",
                 'bordercolor': "black",
