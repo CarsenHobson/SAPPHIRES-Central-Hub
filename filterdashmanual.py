@@ -850,13 +850,13 @@ def update_dashboard(n):
 
         # Indoor AQI
         if not indoor_pm.empty:
-            indoor_aqi =1000 #round(indoor_pm['pm25'].iloc[0])
+            indoor_aqi = round(indoor_pm['pm25'].iloc[0])
             if len(indoor_pm) > 30:
-                indoor_delta =1000 #indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
+                indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
             else:
                 indoor_delta = 0
             indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
-            indoor_arrow = "⬆️" if indoor_delta > 0 else "⬇️"
+            indoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "➖")
             indoor_arrow_color = "red" if indoor_delta > 0 else "green"
         else:
             logging.warning("update_dashboard: No indoor_pm data found.")
@@ -869,7 +869,7 @@ def update_dashboard(n):
             else:
                 outdoor_delta = 0
             outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
-            outdoor_arrow = "⬆️" if outdoor_delta > 0 else "⬇️"
+            outdoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "➖")
             outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
         else:
             logging.warning("update_dashboard: No outdoor_pm data found.")
