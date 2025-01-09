@@ -117,29 +117,41 @@ def get_gauge_color(aqi):
     else:
         return "#8b0000"
 
-def get_spacing(aqi_length, delta_length):
+def get_spacing(aqi, delta):
+
+    aqi_digits = len(str(abs(aqi)))  # Number of digits in AQI
+    delta_digits = len(str(abs(int(delta))))  # Delta digits
+
     # Predefined values for each combination of aqi_length and delta_length
-    spacing_values = {
-        (1, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.73, "arrow_coord": 0.61, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (1, 2): {"aqi_x_coord": 0.42, "delta_x_coord": 0.74,"arrow_coord": 0.6, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (1, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.775, "arrow_coord": 0.58, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (1, 4): {"aqi_x_coord": 0.375, "delta_x_coord": 0.79, "arrow_coord": 0.56, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (2, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.76, "arrow_coord": 0.69, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (2, 2): {"aqi_x_coord": 0.415, "delta_x_coord": 0.775, "arrow_coord": 0.67, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (2, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.8, "arrow_coord": 0.605, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (2, 4): {"aqi_x_coord": 0.38, "delta_x_coord": 0.81, "arrow_coord": 0.57, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
-        (3, 1): {"aqi_x_coord": 0.42, "delta_x_coord": 0.78, "arrow_coord": 0.71, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (3, 2): {"aqi_x_coord": 0.41, "delta_x_coord": 0.81, "arrow_coord": 0.7, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (3, 3): {"aqi_x_coord": 0.395, "delta_x_coord": 0.802, "arrow_coord": 0.608, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
-        (3, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.82, "arrow_coord": 0.58, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
-        (4, 1): {"aqi_x_coord": 0.415, "delta_x_coord": 0.81, "arrow_coord": 0.735, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (4, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.83, "arrow_coord": 0.72, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
-        (4, 3): {"aqi_x_coord": 0.38, "delta_x_coord": 0.83, "arrow_coord": 0.63, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
-        (4, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.84, "arrow_coord": 0.6, "aqi_font": 26, "delta_font": 20, "arrow_size": 28},
-    }
+    if delta == 0:
+        spacing_values = {
+            (1, 1): {"aqi_x_coord": 0.45, "delta_x_coord": 0.73, "arrow_coord": 0.654, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (2, 1): {"aqi_x_coord": 0.45, "delta_x_coord": 0.76, "arrow_coord": 0.724, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (3, 1): {"aqi_x_coord": 0.445, "delta_x_coord": 0.78, "arrow_coord": 0.755, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (4, 1): {"aqi_x_coord": 0.445, "delta_x_coord": 0.81, "arrow_coord": 0.775, "aqi_font": 30,"delta_font": 20, "arrow_size": 30},
+        }
+    else:
+        spacing_values = {
+            (1, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.73, "arrow_coord": 0.61, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 2): {"aqi_x_coord": 0.42, "delta_x_coord": 0.74,"arrow_coord": 0.6, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.775, "arrow_coord": 0.58, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 4): {"aqi_x_coord": 0.375, "delta_x_coord": 0.79, "arrow_coord": 0.56, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.76, "arrow_coord": 0.69, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 2): {"aqi_x_coord": 0.415, "delta_x_coord": 0.775, "arrow_coord": 0.67, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.8, "arrow_coord": 0.605, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 4): {"aqi_x_coord": 0.38, "delta_x_coord": 0.81, "arrow_coord": 0.57, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (3, 1): {"aqi_x_coord": 0.42, "delta_x_coord": 0.78, "arrow_coord": 0.71, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (3, 2): {"aqi_x_coord": 0.41, "delta_x_coord": 0.81, "arrow_coord": 0.7, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (3, 3): {"aqi_x_coord": 0.395, "delta_x_coord": 0.802, "arrow_coord": 0.608, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (3, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.82, "arrow_coord": 0.58, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (4, 1): {"aqi_x_coord": 0.415, "delta_x_coord": 0.81, "arrow_coord": 0.735, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (4, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.83, "arrow_coord": 0.72, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (4, 3): {"aqi_x_coord": 0.38, "delta_x_coord": 0.83, "arrow_coord": 0.63, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (4, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.84, "arrow_coord": 0.6, "aqi_font": 26, "delta_font": 20, "arrow_size": 28},
+        }
 
     # Retrieve the corresponding values or raise an error for invalid inputs
-    key = (aqi_length, delta_length)
+    key = (aqi_digits, delta_digits)
     if key in spacing_values:
         values = spacing_values[key]
         return (
@@ -151,7 +163,7 @@ def get_spacing(aqi_length, delta_length):
             values["arrow_size"],
         )
     else:
-        raise ValueError(f"Invalid combination of aqi_length ({aqi_length}) and delta_length ({delta_length}).")
+        raise ValueError(f"Invalid combination of aqi_length ({aqi_digits}) and delta_length ({delta_digits}).")
 
 def get_fallback_gauge():
     """
@@ -856,7 +868,7 @@ def update_dashboard(n):
             else:
                 indoor_delta = 0
             indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
-            indoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "➖")
+            indoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "--")
             indoor_arrow_color = "red" if indoor_delta > 0 else "green"
         else:
             logging.warning("update_dashboard: No indoor_pm data found.")
@@ -869,7 +881,7 @@ def update_dashboard(n):
             else:
                 outdoor_delta = 0
             outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
-            outdoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "➖")
+            outdoor_arrow = "⬆️" if outdoor_delta > 0 else ("⬇️" if outdoor_delta < 0 else "--")
             outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
         else:
             logging.warning("update_dashboard: No outdoor_pm data found.")
@@ -890,9 +902,9 @@ def update_dashboard(n):
         delta_digits_outdoor = len(str(abs(int(outdoor_delta_text))))  # Delta digits for outdoor
 
         max_aqi = max(indoor_aqi, outdoor_aqi, 100)
-        
+
         #Get Indoor spacing
-        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(indoor_digits, delta_digits_indoor)
+        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(indoor_aqi, indoor_delta)
         #Indoor Gauge
         indoor_gauge = go.Figure(go.Indicator(
             mode="gauge",
@@ -913,21 +925,31 @@ def update_dashboard(n):
             font=dict(size=aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
-        indoor_gauge.add_annotation(
-            x=arrow_coord, y=0.24,
-            text=indoor_arrow,
-            font=dict(size=arrow_size, color=indoor_arrow_color),
-            showarrow=False
-        )
-        indoor_gauge.add_annotation(
-            x=delta_x_coord, y=0.28,
-            text=indoor_delta_text,
-            font=dict(size=delta_font, color=indoor_arrow_color),
-            showarrow=False
-        )
-
+        if indoor_delta == 0:
+            indoor_gauge.add_annotation(
+                    x=arrow_coord, y=0.26,
+                    text=indoor_arrow,
+                    font=dict(size=arrow_size, color="grey"),
+                    showarrow=False
+            )
+        else:
+            indoor_gauge.add_annotation(
+                x=arrow_coord, y=0.24,
+                text=indoor_arrow,
+                font=dict(size=arrow_size, color=indoor_arrow_color),
+                showarrow=False
+            )
+        if indoor_delta == 0:
+            pass
+        else:
+            indoor_gauge.add_annotation(
+                x=delta_x_coord, y=0.28,
+                text=indoor_delta_text,
+                font=dict(size=delta_font, color=indoor_arrow_color),
+                showarrow=False
+            )
         #Get outdoor spacing
-        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(outdoor_digits, delta_digits_outdoor)
+        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(outdoor_aqi, outdoor_delta)
         #Outdoor gauge
         outdoor_gauge = go.Figure(go.Indicator(
             mode="gauge",
@@ -948,18 +970,29 @@ def update_dashboard(n):
             font=dict(size=aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
-        outdoor_gauge.add_annotation(
-            x=arrow_coord, y=0.24,
-            text=outdoor_arrow,
-            font=dict(size=arrow_size, color=outdoor_arrow_color),
-            showarrow=False
-        )
-        outdoor_gauge.add_annotation(
-            x=delta_x_coord, y=0.28,
-            text=outdoor_delta_text,
-            font=dict(size=delta_font, color=outdoor_arrow_color),
-            showarrow=False
-        )
+        if outdoor_delta == 0:
+            outdoor_gauge.add_annotation(
+                x=arrow_coord, y=0.26,
+                text=outdoor_arrow,
+                font=dict(size=arrow_size, color="grey"),
+                showarrow=False
+            )
+        else:
+            outdoor_gauge.add_annotation(
+                x=arrow_coord, y=0.24,
+                text=outdoor_arrow,
+                font=dict(size=arrow_size, color=outdoor_arrow_color),
+                showarrow=False
+            )
+        if outdoor_delta == 0:
+            pass
+        else:
+            outdoor_gauge.add_annotation(
+                x=delta_x_coord, y=0.28,
+                text=outdoor_delta_text,
+                font=dict(size=delta_font, color=outdoor_arrow_color),
+                showarrow=False
+            )
 
         return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
 
