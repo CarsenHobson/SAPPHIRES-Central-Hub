@@ -9,12 +9,13 @@ import base64
 import pandas as pd
 import plotly.graph_objs as go
 import logging
+from dash.exceptions import PreventUpdate  # <-- ADDED
 
 ###################################################
 # CONFIG & SETUP
 ###################################################
 
-DB_PATH = '/home/mainhubs/SAPPHIREStest.db'  # Adjust path as needed
+DB_PATH = '/home/mainhubs/SAPPHIREStest.db'  # Adjust path if needed
 
 BACKGROUND_COLOR = "#f0f2f5"
 PRIMARY_COLOR = "#FFFFCB"
@@ -118,11 +119,12 @@ def get_gauge_color(aqi):
         return "#8b0000"
 
 def get_spacing(aqi, delta):
+    """
+    Dynamically spaces the AQI & delta text and arrow.
+    """
+    aqi_digits = len(str(abs(aqi)))
+    delta_digits = len(str(abs(int(delta))))
 
-    aqi_digits = len(str(abs(aqi)))  # Number of digits in AQI
-    delta_digits = len(str(abs(int(delta))))  # Delta digits
-
-    # Predefined values for each combination of aqi_length and delta_length
     if delta == 0:
         spacing_values = {
             (1, 1): {"aqi_x_coord": 0.45, "delta_x_coord": 0.73, "arrow_coord": 0.654, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
@@ -150,20 +152,21 @@ def get_spacing(aqi, delta):
             (4, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.84, "arrow_coord": 0.6, "aqi_font": 26, "delta_font": 20, "arrow_size": 28},
         }
 
-    # Retrieve the corresponding values or raise an error for invalid inputs
     key = (aqi_digits, delta_digits)
     if key in spacing_values:
-        values = spacing_values[key]
+        v = spacing_values[key]
         return (
-            values["aqi_x_coord"],
-            values["delta_x_coord"],
-            values["arrow_coord"],
-            values["aqi_font"],
-            values["delta_font"],
-            values["arrow_size"],
+            v["aqi_x_coord"],
+            v["delta_x_coord"],
+            v["arrow_coord"],
+            v["aqi_font"],
+            v["delta_font"],
+            v["arrow_size"]
         )
     else:
-        raise ValueError(f"Invalid combination of aqi_length ({aqi_digits}) and delta_length ({delta_digits}).")
+        raise ValueError(
+            f"Invalid combination of aqi_length ({aqi_digits}) and delta_length ({delta_digits})."
+        )
 
 def get_fallback_gauge():
     """
@@ -223,30 +226,6 @@ def get_last_system_state():
     except Exception as ex:
         logging.exception(f"Unexpected error in get_last_system_state: {ex}")
         return (None, "OFF")
-    finally:
-        if conn:
-            conn.close()
-
-def get_latest_user_control():
-    """
-    Returns the most recent user_input from user_control (e.g., 'ON' or 'OFF').
-    """
-    conn = None
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_input FROM user_control ORDER BY id DESC LIMIT 1")
-        row = cursor.fetchone()
-        if row is None:
-            logging.info("No user_control rows found; defaulting to OFF.")
-            return "OFF"
-        return row[0]
-    except sqlite3.Error as e:
-        logging.error(f"Error in get_latest_user_control: {e}")
-        return "OFF"
-    except Exception as ex:
-        logging.exception(f"Unexpected error in get_latest_user_control: {ex}")
-        return "OFF"
     finally:
         if conn:
             conn.close()
@@ -365,6 +344,7 @@ def update_user_control_decision(state):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db_connection()
         cursor = conn.cursor()
+        # Here is where we insert "ON" or "OFF" in the user_control table
         cursor.execute('INSERT INTO user_control (timestamp, user_input) VALUES (?,?)', (timestamp, state))
         conn.commit()
     except sqlite3.Error as e:
@@ -380,50 +360,80 @@ def update_user_control_decision(state):
 ###################################################
 
 def dashboard_layout():
+    """
+    Constructs the main dashboard layout with all modals/buttons.
+    """
     return dbc.Container([
-        # Title Row
+        # Title row with embedded button
         dbc.Row([
             dbc.Col(
-                html.H1(
-                    "CURRENT CONDITIONS",
-                    className="text-center mb-0",
+                html.Div(
+                    [
+                        # The title itself
+                        html.H1(
+                            "CURRENT CONDITIONS",
+                            className="text-center mb-0",
+                            style={
+                                "font-family": "Roboto, sans-serif",
+                                "font-weight": "700",
+                                "color": "black",
+                                "font-size": "2.5rem",
+                                # We no longer put the border here on the H1 directly
+                                "margin": "0"
+                            },
+                        ),
+                        # The smaller, grey button in the top-right corner
+                        html.Div(
+                            dcc.Link(
+                                dbc.Button(
+                                    "View Historical",
+                                    size="sm",  # make it smaller
+                                    style={
+                                        "background-color": "#96968d",
+                                        "color": "white",
+                                        "border": "#96968d"
+                                    },
+                                ),
+                                href="/historical",
+                            ),
+                            style={
+                                "position": "absolute",
+                                "top": "15px",
+                                "right": "10px",
+                            },
+                        ),
+                    ],
                     style={
-                        "font-family": "Roboto, sans-serif",
-                        "font-weight": "700",
-                        "color": "black",
-                        "font-size": "2.5rem",
+                        # Now the containing box itself has the border and color
+                        "position": "relative",
                         "background-color": PRIMARY_COLOR,
-                        "padding": "0",
                         "border": "2px solid black",
-                        "border-radius": "10px 10px 0 0"
+                        "border-radius": "10px 10px 0 0",
+                        "padding": "0.5rem 1rem",
+                        # If you want a fixed height, uncomment below:
+                        # "height": "65px",
                     }
-                ), width=12
+                ),
+                width=12
             )
         ], className="g-0"),
 
-        # Add the dcc.Interval component for periodic updates
-        dcc.Interval(
-            id='interval-component',
-            interval=60000,  # Update every 60 seconds
-            n_intervals=0    # Start at 0 intervals
-        ),
-
-        # Main content row with indoor and outdoor cards
+        # Indoor/Outdoor Cards
         dbc.Row([
             # Indoor card
             dbc.Col(dbc.Card([
                 dbc.CardHeader("INSIDE", className="text-center mb-0",
-                               style={
-                                   "font-size": "1.5rem",
-                                   "font-weight": "700",
-                                   "color": "black",
-                                   "background": "white",
-                                   "border-bottom": "2px solid black",
-                                   "border-right": "2px solid black",
-                                   "border-left": "2px solid black"
-                               }),
+                    style={
+                        "font-size": "1.5rem",
+                        "font-weight": "700",
+                        "color": "black",
+                        "background": "white",
+                        "border-bottom": "2px solid black",
+                        "border-right": "2px solid black",
+                        "border-left": "2px solid black"
+                    }
+                ),
                 html.Div([
-                    # AQI gauge
                     html.Div([
                         dcc.Graph(id="indoor-gauge", config={"displayModeBar": False})
                     ], style={
@@ -433,7 +443,6 @@ def dashboard_layout():
                         "border-bottom": "none",
                         "height": "115px"
                     }),
-                    # Temperature box
                     html.Div([
                         html.Div([
                             html.Div(
@@ -484,15 +493,16 @@ def dashboard_layout():
             # Outdoor card
             dbc.Col(dbc.Card([
                 dbc.CardHeader("OUTSIDE", className="text-center mb-0",
-                               style={
-                                   "font-size": "1.5rem",
-                                   "font-weight": "700",
-                                   "color": "black",
-                                   "background": "white",
-                                   "border-bottom": "2px solid black",
-                                   "border-right": "2px solid black",
-                                   "border-left": "2px solid black"
-                               }),
+                    style={
+                        "font-size": "1.5rem",
+                        "font-weight": "700",
+                        "color": "black",
+                        "background": "white",
+                        "border-bottom": "2px solid black",
+                        "border-right": "2px solid black",
+                        "border-left": "2px solid black"
+                    }
+                ),
                 html.Div([
                     html.Div([
                         dcc.Graph(id="outdoor-gauge", config={"displayModeBar": False})
@@ -551,6 +561,32 @@ def dashboard_layout():
             ]), width=6, className="p-0")
         ]),
 
+        dbc.Row([
+            html.Div(
+                "Status Loading...",  # <--- The text
+                id="filter-status-text",  # <--- The ID is now on the outer box
+                style={
+                    "border": "2px solid black",
+                    "padding": "5px",
+                    "width": "150px",
+                    "height": "100px",
+                    "position": "absolute",
+                    "left": "50%",
+                    "transform": "translateX(-50%)",
+                    "bottom": "683px",
+                    "display": "flex",
+                    "align-items": "center",
+                    "justify-content": "center",
+                    "text-align": "center",
+                    "box-sizing": "border-box",
+                    "background-color": "white",
+                    "border-radius": "3.5px",
+                    "font-size": "1.7rem",
+                    "color": "yellow"
+                }
+            )
+        ], style={"position": "relative", "height": "682px"}, className="g-0"),
+
         # Main Air Quality Degradation Modal
         dbc.Modal(
             [
@@ -566,7 +602,7 @@ def dashboard_layout():
                 dbc.ModalFooter([
                     dbc.Button(
                         "Yes",
-                        id="enable-fan-filterstate",
+                        id="enable-fan-filterstate",  # <--- This is critical!
                         color="success",
                         className="me-2",
                         style={"width":"170px"}
@@ -598,7 +634,7 @@ def dashboard_layout():
             keyboard=False
         ),
 
-        # Disclaimer Modal if user chooses "No" from main modal
+        # Disclaimer Modal
         dbc.Modal(
             [
                 dbc.ModalHeader(
@@ -634,7 +670,7 @@ def dashboard_layout():
             keyboard=False
         ),
 
-        # Caution Modal if user insists on keeping fan off after disclaimer
+        # Caution Modal
         dbc.Modal(
             [
                 dbc.ModalHeader(
@@ -660,26 +696,24 @@ def dashboard_layout():
         ),
     ], fluid=True, className="p-4")
 
+
 def historical_conditions_layout():
     """
-    Constructs the historical conditions layout, showing line charts
-    of indoor/outdoor PM readings (second page).
+    Constructs the historical conditions layout.
     """
     conn = None
     try:
         conn = get_db_connection()
-        # Limit to last 500 readings
-        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 500;", conn)
-        outdoor_data = pd.read_sql("SELECT timestamp, pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 500;", conn)
+        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 100;", conn)
+        outdoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 100;", conn)
     except Exception as e:
         logging.exception(f"Error retrieving historical data: {e}")
         indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
-        outdoor_data = pd.DataFrame(columns=["timestamp", "pm25_value"])
+        outdoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
     finally:
         if conn:
             conn.close()
 
-    # Convert timestamps
     if not indoor_data.empty:
         indoor_data['timestamp'] = pd.to_datetime(indoor_data['timestamp'])
     else:
@@ -703,7 +737,7 @@ def historical_conditions_layout():
     if not outdoor_data.empty:
         fig.add_trace(go.Scatter(
             x=outdoor_data['timestamp'],
-            y=outdoor_data['pm25_value'],
+            y=outdoor_data['pm25'],
             mode='lines',
             name='Outdoor PM',
             line=dict(color='blue', width=2, shape='spline'),
@@ -738,6 +772,17 @@ def historical_conditions_layout():
     )
 
     return dbc.Container([
+        # >>>> ADDED: "Back to Dashboard" button in the top-left <<<<
+        dbc.Row([
+            dbc.Col(
+                dcc.Link(
+                    dbc.Button("View Current Conditions", color="secondary"),
+                    href="/"
+                ),
+                width="auto"
+            )
+        ], style={"margin-top": "10px"}),
+
         dbc.Row(dbc.Col(html.H1("Historical Conditions", className="text-center mb-4"))),
         dbc.Row(dbc.Col(dcc.Graph(figure=fig, config={"displayModeBar": False}))),
     ], fluid=True, className="p-4")
@@ -752,7 +797,6 @@ app = dash.Dash(
     meta_tags=[{"name": "viewport", "content": "width=device-width,initial-scale=1"}]
 )
 
-# Custom index string to handle swipes (left/right) for navigation
 app.index_string = '''
 <!DOCTYPE html>
 <html>
@@ -797,15 +841,21 @@ app.index_string = '''
 </html>
 '''
 
+# Top-level layout with a single dcc.Interval and all the needed Stores
 app.layout = html.Div(
     style={"overflow": "hidden", "height": "100vh"},
     children=[
-        dcc.Location(id='url', refresh=False),
-        dcc.Store(id='on-alert-shown', data=False),  # Add the missing store component
-        dcc.Store(id='modal-open-state', data=False),  # For modal tracking
-        dcc.Store(id='disclaimer-modal-open', data=False),
-        dcc.Store(id='caution-modal-open', data=False),
-        html.Div(id='page-content', style={"outline": "none"})
+        dcc.Location(id="url", refresh=False),
+        dcc.Interval(id="interval-component", interval=60000, n_intervals=0),
+
+        # dcc.Store components to hold states for modals
+        dcc.Store(id="on-alert-shown", data=False),
+        dcc.Store(id="modal-open-state", data=False),
+        dcc.Store(id="disclaimer-modal-open", data=False),
+        dcc.Store(id="caution-modal-open", data=False),
+
+        # The main page rendering container
+        html.Div(id="page-content", style={"outline": "none"}),
     ]
 )
 
@@ -819,20 +869,18 @@ app.layout = html.Div(
         Output('indoor-temp-display','children'),
         Output('outdoor-temp-display','children')
     ],
-    [Input('interval-component','n_intervals')]
+    Input('interval-component','n_intervals')
 )
+
 def update_dashboard(n):
     """
     Periodically fetches the latest indoor/outdoor data from the database,
-    updates:
-        - Indoor/Outdoor AQI gauges
-        - Indoor/Outdoor temperature displays
+    updates the gauge figures and temp displays.
     """
     try:
         conn = get_db_connection()
     except Exception as e:
         logging.exception(f"update_dashboard: DB connection failed: {e}")
-        # Return fallback
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     if conn is None:
@@ -840,73 +888,72 @@ def update_dashboard(n):
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     try:
+        # Query PM data
+        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
+        outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
+        conn.close()
+
         # Defaults
         indoor_aqi = 0
         outdoor_aqi = 0
         indoor_temp_text = "N/A"
         outdoor_temp_text = "N/A"
-        indoor_arrow = "⬇️"
-        outdoor_arrow = "⬇️"
-        indoor_arrow_color = "green"
-        outdoor_arrow_color = "green"
+        indoor_delta = 0
+        outdoor_delta = 0
+        indoor_arrow = "--"
+        outdoor_arrow = "--"
+        indoor_arrow_color = "grey"
+        outdoor_arrow_color = "grey"
         indoor_delta_text = "0"
         outdoor_delta_text = "0"
 
-        # Query last 60 entries of PM data
-        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
-        outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
-
-        conn.close()
-
-        # Indoor AQI
+        # Indoor
         if not indoor_pm.empty:
             indoor_aqi = round(indoor_pm['pm25'].iloc[0])
             if len(indoor_pm) > 30:
                 indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
-            else:
-                indoor_delta = 0
             indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
-            indoor_arrow = "⬆️" if indoor_delta > 0 else ("⬇️" if indoor_delta < 0 else "--")
-            indoor_arrow_color = "red" if indoor_delta > 0 else "green"
-        else:
-            logging.warning("update_dashboard: No indoor_pm data found.")
-
-        # Outdoor AQI
-        if not outdoor_pm.empty:
-            outdoor_aqi = round(outdoor_pm['pm25'].iloc[0])
-            if len(outdoor_pm) > 30:
-                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25'].iloc[30:].mean())
+            if indoor_delta > 0:
+                indoor_arrow = "⬆️"
+                indoor_arrow_color = "red"
+            elif indoor_delta < 0:
+                indoor_arrow = "⬇️"
+                indoor_arrow_color = "green"
             else:
-                outdoor_delta = 0
-            outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
-            outdoor_arrow = "⬆️" if outdoor_delta > 0 else ("⬇️" if outdoor_delta < 0 else "--")
-            outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
-        else:
-            logging.warning("update_dashboard: No outdoor_pm data found.")
+                indoor_arrow = "--"
+                indoor_arrow_color = "grey"
 
-        # Indoor temperature
         if not indoor_temp_df.empty:
             indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
             indoor_temp_text = f"{indoor_temp_value} °F"
 
-        # Outdoor temperature
+        # Outdoor
+        if not outdoor_pm.empty:
+            outdoor_aqi = round(outdoor_pm['pm25'].iloc[0])
+            if len(outdoor_pm) > 30:
+                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25'].iloc[30:].mean())
+            outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
+            if outdoor_delta > 0:
+                outdoor_arrow = "⬆️"
+                outdoor_arrow_color = "red"
+            elif outdoor_delta < 0:
+                outdoor_arrow = "⬇️"
+                outdoor_arrow_color = "green"
+            else:
+                outdoor_arrow = "--"
+                outdoor_arrow_color = "grey"
+
         if not outdoor_temp_df.empty:
             outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
             outdoor_temp_text = f"{outdoor_temp_value} °F"
 
-        indoor_digits = len(str(abs(indoor_aqi)))  # Number of digits in indoor AQI
-        outdoor_digits = len(str(abs(outdoor_aqi)))  # Number of digits in outdoor AQI
-        delta_digits_indoor = len(str(abs(int(indoor_delta_text))))  # Delta digits for indoor
-        delta_digits_outdoor = len(str(abs(int(outdoor_delta_text))))  # Delta digits for outdoor
-
         max_aqi = max(indoor_aqi, outdoor_aqi, 100)
 
-        #Get Indoor spacing
-        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(indoor_aqi, indoor_delta)
-        #Indoor Gauge
-        indoor_gauge = go.Figure(go.Indicator(
+        # Build Indoor gauge
+        indoor_x, indoor_dx, indoor_ax, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta)
+        indoor_fig = go.Figure(go.Indicator(
             mode="gauge",
             value=indoor_aqi,
             gauge={
@@ -917,41 +964,31 @@ def update_dashboard(n):
             },
             domain={'x': [0, 1], 'y': [0, 1]}
         ))
-        indoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
-        indoor_gauge.add_annotation(
-            x=aqi_x_coord, y=0.25,
+        indoor_fig.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+        indoor_fig.add_annotation(
+            x=indoor_x, y=0.25,
             text=f"<b>AQI:{indoor_aqi}</b>",
             showarrow=False,
-            font=dict(size=aqi_font, color="black"),
+            font=dict(size=indoor_aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
-        if indoor_delta == 0:
-            indoor_gauge.add_annotation(
-                    x=arrow_coord, y=0.26,
-                    text=indoor_arrow,
-                    font=dict(size=arrow_size, color="grey"),
-                    showarrow=False
-            )
-        else:
-            indoor_gauge.add_annotation(
-                x=arrow_coord, y=0.24,
-                text=indoor_arrow,
-                font=dict(size=arrow_size, color=indoor_arrow_color),
-                showarrow=False
-            )
-        if indoor_delta == 0:
-            pass
-        else:
-            indoor_gauge.add_annotation(
-                x=delta_x_coord, y=0.28,
+        indoor_fig.add_annotation(
+            x=indoor_ax, y=0.24 if indoor_delta != 0 else 0.26,
+            text=indoor_arrow,
+            font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
+            showarrow=False
+        )
+        if indoor_delta != 0:
+            indoor_fig.add_annotation(
+                x=indoor_dx, y=0.28,
                 text=indoor_delta_text,
-                font=dict(size=delta_font, color=indoor_arrow_color),
+                font=dict(size=indoor_delta_font, color=indoor_arrow_color),
                 showarrow=False
             )
-        #Get outdoor spacing
-        aqi_x_coord, delta_x_coord, arrow_coord, aqi_font, delta_font, arrow_size = get_spacing(outdoor_aqi, outdoor_delta)
-        #Outdoor gauge
-        outdoor_gauge = go.Figure(go.Indicator(
+
+        # Build Outdoor gauge
+        outdoor_x, outdoor_dx, outdoor_ax, outdoor_aqi_font, outdoor_delta_font, outdoor_arrow_size = get_spacing(outdoor_aqi, outdoor_delta)
+        outdoor_fig = go.Figure(go.Indicator(
             mode="gauge",
             value=outdoor_aqi,
             gauge={
@@ -962,39 +999,29 @@ def update_dashboard(n):
             },
             domain={'x': [0, 1], 'y': [0, 1]}
         ))
-        outdoor_gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
-        outdoor_gauge.add_annotation(
-            x=aqi_x_coord, y=0.25,
+        outdoor_fig.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+        outdoor_fig.add_annotation(
+            x=outdoor_x, y=0.25,
             text=f"<b>AQI:{outdoor_aqi}</b>",
             showarrow=False,
-            font=dict(size=aqi_font, color="black"),
+            font=dict(size=outdoor_aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
-        if outdoor_delta == 0:
-            outdoor_gauge.add_annotation(
-                x=arrow_coord, y=0.26,
-                text=outdoor_arrow,
-                font=dict(size=arrow_size, color="grey"),
-                showarrow=False
-            )
-        else:
-            outdoor_gauge.add_annotation(
-                x=arrow_coord, y=0.24,
-                text=outdoor_arrow,
-                font=dict(size=arrow_size, color=outdoor_arrow_color),
-                showarrow=False
-            )
-        if outdoor_delta == 0:
-            pass
-        else:
-            outdoor_gauge.add_annotation(
-                x=delta_x_coord, y=0.28,
+        outdoor_fig.add_annotation(
+            x=outdoor_ax, y=0.24 if outdoor_delta != 0 else 0.26,
+            text=outdoor_arrow,
+            font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
+            showarrow=False
+        )
+        if outdoor_delta != 0:
+            outdoor_fig.add_annotation(
+                x=outdoor_dx, y=0.28,
                 text=outdoor_delta_text,
-                font=dict(size=delta_font, color=outdoor_arrow_color),
+                font=dict(size=outdoor_delta_font, color=outdoor_arrow_color),
                 showarrow=False
             )
 
-        return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
+        return indoor_fig, outdoor_fig, indoor_temp_text, outdoor_temp_text
 
     except Exception as ex:
         logging.exception(f"Error in update_dashboard callback: {ex}")
@@ -1004,26 +1031,52 @@ def update_dashboard(n):
 # FAN STATUS UPDATE
 ###################################################
 @app.callback(
-    Output("fan-status-box", "children"),
-    [Input("interval-component", "n_intervals")]
+    Output("filter-status-text", "children"),
+    Output("filter-status-text", "style"),
+    Input("interval-component", "n_intervals")
 )
-def update_fan_status(n):
+def update_filter_status(n_intervals):
     """
-    Checks if the latest filter_state == 'ON' AND latest user_control == 'ON'.
-    If both are ON, display 'Fan is currently ON' (green).
-    Otherwise, 'Fan is currently OFF' (red).
+    Periodically checks if filter_state is 'ON' or 'OFF'
+    and updates the text & style, WITHOUT any bubble/oval shape.
     """
     try:
-        _, last_filter_state = get_last_filter_state()
-        last_user_control = get_latest_user_control()
+        _, filter_state = get_last_filter_state()
+    except Exception as e:
+        logging.exception(f"Error retrieving filter_state: {e}")
+        filter_state = "UNKNOWN"
 
-        if last_filter_state == "ON" and last_user_control == "ON":
-            return html.Span("Fan is currently ON", style={"color": "green"})
-        else:
-            return html.Span("Fan is currently OFF", style={"color": "red"})
-    except Exception as ex:
-        logging.exception(f"Error in update_fan_status: {ex}")
-        return html.Span("Fan status unknown", style={"color": "gray"})
+    # We’ll define a base style that matches the outer box
+    base_style = {
+        "border": "2px solid black",
+        "padding": "5px",
+        "width": "150px",
+        "height": "100px",
+        "position": "absolute",
+        "left": "50%",
+        "transform": "translateX(-50%)",
+        "bottom": "683px",
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "center",
+        "text-align": "center",
+        "box-sizing": "border-box",
+        "background-color": "white",
+        "border-radius": "3.5px",
+        "font-size": "1.7rem"
+    }
+
+    if filter_state == "ON":
+        # Let’s just make the text white if ON:
+        return "Filter Is On", {**base_style, "color": "green"}
+
+    elif filter_state == "OFF":
+        # Let’s make the text red if OFF:
+        return "Filter Is Off", {**base_style, "color": "red"}
+
+    else:
+        # Unknown => yellow text
+        return "Status Unknown", {**base_style, "color": "yellow"}
 
 ###################################################
 # MODAL HANDLING CALLBACK
@@ -1046,127 +1099,143 @@ def update_fan_status(n):
         Input("remind-me-hour-filterstate", "n_clicks"),
         Input("disclaimer-yes", "n_clicks"),
         Input("disclaimer-no", "n_clicks"),
-        Input("caution-close", "n_clicks")
+        Input("caution-close", "n_clicks"),
     ],
     [
         State("on-alert-shown", "data"),
         State("modal-open-state", "data"),
         State("disclaimer-modal-open", "data"),
-        State("caution-modal-open", "data")
-    ]
+        State("caution-modal-open", "data"),
+        State("url", "pathname")  # <-- ADDED
+    ],
+    prevent_initial_call=True           # <-- ADDED
 )
 
-def handle_filter_state_event(n_intervals,
-                              enable_clicks,
-                              keep_off_clicks,
-                              remind_me_clicks,
-                              remind_me_hour_clicks,
-                              disclaimer_yes_clicks,
-                              disclaimer_no_clicks,
-                              caution_close_clicks,
-                              alert_shown,
-                              modal_open_state,
-                              disclaimer_open_state,
-                              caution_open_state):
+def handle_filter_state_event(
+    n_intervals,
+    enable_fan_clicks,
+    keep_fan_off_clicks,
+    remind_me_20_clicks,
+    remind_me_hour_clicks,
+    disclaimer_yes_clicks,
+    disclaimer_no_clicks,
+    caution_close_clicks,
+    alert_shown,
+    modal_open_state,
+    disclaimer_open_state,
+    caution_open_state,
+    pathname
+):
     """
     Handles logic for showing modals, disclaimers, reminders,
     and user choices (Yes/No/Remind).
     """
+    if pathname != '/':
+        raise PreventUpdate
+
+    triggered_id = callback_context.triggered[0]["prop_id"].split(".")[0]
+
+    modal_open = modal_open_state
+    disclaim_open = disclaimer_open_state
+    caution_open = caution_open_state
+    updated_alert_shown = alert_shown
+
+    last_event_id, last_state = get_last_system_state()
+    due_reminder_event_id, reminder_id = get_due_reminder()
+
     try:
-        triggered_id = callback_context.triggered[0]["prop_id"].split(".")[0]
-
-        # Start from stored states
-        modal_open = modal_open_state
-        disclaimer_open = disclaimer_open_state
-        caution_open = caution_open_state
-        updated_alert_shown = alert_shown
-
-        last_event_id, last_state = get_last_system_state()
-        due_reminder_event_id, reminder_id = get_due_reminder()
-
         # Check if a reminder is due
         if due_reminder_event_id and due_reminder_event_id == last_event_id and last_state == "ON":
             modal_open = True
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
             updated_alert_shown = True
             remove_reminder(reminder_id)
 
-        # If interval triggered, filter_state=ON, and event not processed
+        # If interval triggered, system_state=ON, event not processed
         elif triggered_id == "interval-component" and last_state == "ON" and last_event_id:
             if not is_event_processed(last_event_id):
                 modal_open = True
-                disclaimer_open = False
+                disclaim_open = False
                 caution_open = False
                 updated_alert_shown = True
                 record_event_as_processed(last_event_id, "SHOWING_MODAL")
 
-        # Handle user clicks
+        # Handle user clicks in the modal
         if triggered_id == "enable-fan-filterstate":
-            update_user_control_decision("ON")
+            # USER CLICKED "YES" => Insert "ON" in user_control
+            update_user_control_decision("ON")  # <--- This calls the DB insert
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
             if last_event_id:
                 record_event_as_processed(last_event_id, "ON")
 
         elif triggered_id == "keep-fan-off-filterstate":
+            # user clicked "No, keep fan off" => show disclaimer
             modal_open = False
-            disclaimer_open = True
+            disclaim_open = True
             caution_open = False
+            if last_event_id:
+                record_event_as_processed(last_event_id, "DISCLAIMER")
 
         elif triggered_id == "remind-me-filterstate":
+            # "Remind me in 20 mins"
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
             if last_event_id:
                 add_reminder(last_event_id, 20, "20 minutes")
                 record_event_as_processed(last_event_id, "REMIND_20")
 
         elif triggered_id == "remind-me-hour-filterstate":
+            # "Remind me in an hour"
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
             if last_event_id:
                 add_reminder(last_event_id, 60, "1 hour")
                 record_event_as_processed(last_event_id, "REMIND_60")
 
         elif triggered_id == "disclaimer-yes":
+            # user insisted on no fan
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = True
             update_user_control_decision("OFF")
             if last_event_id:
                 record_event_as_processed(last_event_id, "OFF")
 
         elif triggered_id == "disclaimer-no":
+            # user changed mind => Turn fan ON
             update_user_control_decision("ON")
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
             if last_event_id:
                 record_event_as_processed(last_event_id, "ON")
 
         elif triggered_id == "caution-close":
+            # user closed the caution modal
             modal_open = False
-            disclaimer_open = False
+            disclaim_open = False
             caution_open = False
 
         return (
             modal_open,
             updated_alert_shown,
-            disclaimer_open,
+            disclaim_open,
             caution_open,
             modal_open,
-            disclaimer_open,
+            disclaim_open,
             caution_open
         )
     except Exception as ex:
         logging.exception(f"Error in handle_filter_state_event callback: {ex}")
+        # Return stored states so you don't break everything
         return (
             modal_open_state,
             alert_shown,
-            "Error encountered in callback. Check logs.",
             disclaimer_open_state,
             caution_open_state,
             modal_open_state,
@@ -1175,19 +1244,13 @@ def handle_filter_state_event(n_intervals,
         )
 
 ###################################################
-# RUN
+# ROUTING
 ###################################################
-# Other imports and setup code above remain the same.
-
-# Adjustments for routing and layout:
 @app.callback(
     Output('page-content', 'children'),
     Input('url', 'pathname')
 )
 def display_page(pathname):
-    """
-    Renders the appropriate layout based on the URL path.
-    """
     if pathname == '/':
         return dashboard_layout()
     elif pathname == '/historical':
@@ -1195,6 +1258,8 @@ def display_page(pathname):
     else:
         return html.Div("404 Page Not Found", className="text-center mt-4")
 
-# Running the app
+###################################################
+# RUN
+###################################################
 if __name__ == '__main__':
     app.run_server(debug=True)
