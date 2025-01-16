@@ -389,16 +389,16 @@ def dashboard_layout():
                                     "View Historical",
                                     size="sm",  # make it smaller
                                     style={
-                                        "background-color": "#96968d",
+                                        "background-color": "#6e6e6d",
                                         "color": "white",
-                                        "border": "#96968d"
+                                        "border": "#6e6e6d"
                                     },
                                 ),
                                 href="/historical",
                             ),
                             style={
                                 "position": "absolute",
-                                "top": "15px",
+                                "top": "10px",
                                 "right": "10px",
                             },
                         ),
@@ -409,7 +409,7 @@ def dashboard_layout():
                         "background-color": PRIMARY_COLOR,
                         "border": "2px solid black",
                         "border-radius": "10px 10px 0 0",
-                        "padding": "0.5rem 1rem",
+                        #"padding": "0.5rem 0.5rem",
                         # If you want a fixed height, uncomment below:
                         # "height": "65px",
                     }
@@ -776,7 +776,7 @@ def historical_conditions_layout():
         dbc.Row([
             dbc.Col(
                 dcc.Link(
-                    dbc.Button("View Current Conditions", color="secondary"),
+                    dbc.Button("View Current Conditions", size="sm", style = {"color": "white", "background-color": "#6e6e6d", "border": "#6e6e6d"}),
                     href="/"
                 ),
                 width="auto"
@@ -1139,7 +1139,7 @@ def handle_filter_state_event(
     disclaim_open = disclaimer_open_state
     caution_open = caution_open_state
     updated_alert_shown = alert_shown
-
+    last_filter_state = get_last_filter_state()
     last_event_id, last_state = get_last_system_state()
     due_reminder_event_id, reminder_id = get_due_reminder()
 
@@ -1153,7 +1153,7 @@ def handle_filter_state_event(
             remove_reminder(reminder_id)
 
         # If interval triggered, system_state=ON, event not processed
-        elif triggered_id == "interval-component" and last_state == "ON" and last_event_id:
+        elif triggered_id == "interval-component" and last_state == "ON" and last_filter_state == "OFF" and last_event_id:
             if not is_event_processed(last_event_id):
                 modal_open = True
                 disclaim_open = False
