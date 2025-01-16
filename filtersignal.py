@@ -1,3 +1,4 @@
+import time
 import sqlite3
 import logging
 import paho.mqtt.client as mqtt
@@ -8,13 +9,12 @@ MQTT_USERNAME = "SAPPHIRE"
 MQTT_PASSWORD = "SAPPHIRE"
 BROKER_ADDRESS = "10.42.0.1"
 MQTT_TOPIC = "filter_signal"
+RUN_DURATION = 59  # seconds to keep the loop running
 
-# Configure logging at the top level
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO, 
     format='%(asctime)s [%(levelname)s] %(name)s - %(message)s'
 )
-
 
 def get_db_connection():
     """
@@ -28,7 +28,6 @@ def get_db_connection():
         logging.error(f"Database connection error: {e}")
         raise
 
-
 def get_last_filter_state():
     """
     Returns (id, filter_state) of the most recent entry in filter_state.
@@ -39,11 +38,11 @@ def get_last_filter_state():
             cursor = conn.cursor()
             cursor.execute('SELECT id, filter_state FROM filter_state ORDER BY id DESC LIMIT 1')
             result = cursor.fetchone()
-
+            
             if not result:
                 logging.info("No rows found in filter_state table; returning OFF as default.")
                 return (None, "OFF")
-
+            
             return result  # (id, filter_state)
     except sqlite3.Error as e:
         logging.error(f"Error fetching last_filter_state: {e}")
@@ -52,20 +51,24 @@ def get_last_filter_state():
         logging.exception(f"Unexpected error in get_last_filter_state: {ex}")
         return (None, "OFF")
 
-
 def on_publish(client, userdata, result):
     """
     Callback for when a message has been published.
     """
     logging.info(f"Message published with result code: {result}")
 
-
 def main():
-    # Set up MQTT client
+    """
+    Main routine that:
+      - Connects to MQTT broker
+      - Loops for RUN_DURATION seconds, checking and publishing filter state
+    """
+    # Create and configure MQTT client
     client = mqtt.Client()
     client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.on_publish = on_publish
 
+    # Attempt to connect to the broker
     try:
         client.connect(BROKER_ADDRESS, 1883, 60)
         logging.info(f"Connected to MQTT broker at {BROKER_ADDRESS}")
@@ -73,20 +76,30 @@ def main():
         logging.error(f"Failed to connect to the MQTT broker: {e}")
         return
 
-    try:
-        last_id, last_filter_value = get_last_filter_state()
-        logging.info(f"Last filter state: id={last_id}, state={last_filter_value}")
+    start_time = time.time()
 
-        # Publish only if the state is ON
-        if last_filter_value.upper() == 'ON':
-            ret = client.publish(MQTT_TOPIC, "ON", qos=1)
-            logging.info(f"Publishing 'ON' to topic '{MQTT_TOPIC}'. Return code: {ret.rc}")
-        else:
-            logging.info("Filter state is not ON; no message published.")
+    # Keep checking and publishing filter state for 59 seconds
+    while (time.time() - start_time) < RUN_DURATION:
+        try:
+            last_id, last_filter_value = get_last_filter_state()
+            logging.info(f"Last filter state: id={last_id}, state={last_filter_value}")
 
-    except Exception as e:
-        logging.error(f"An error occurred while processing filter state: {e}")
+            # Publish only if the state is ON
+            if last_filter_value.upper() == 'ON':
+                ret = client.publish(MQTT_TOPIC, "ON", qos=1)
+                logging.info(f"Publishing 'ON' to topic '{MQTT_TOPIC}'. Return code: {ret.rc}")
+            else:
+                logging.info("Filter state is not ON; no message published.")
+                
+        except Exception as e:
+            logging.error(f"An error occurred while processing filter state: {e}")
 
+        # Add a small sleep to avoid hammering the database or CPU
+        time.sleep(1)
+
+    # (Optional) Disconnect after the loop finishes
+    client.disconnect()
+    logging.info("Finished the 59-second loop and disconnected from MQTT broker.")
 
 if __name__ == "__main__":
     main()
