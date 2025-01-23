@@ -9,7 +9,7 @@ import base64
 import pandas as pd
 import plotly.graph_objs as go
 import logging
-from dash.exceptions import PreventUpdate  # <-- ADDED
+
 
 ###################################################
 # CONFIG & SETUP
@@ -234,6 +234,8 @@ def is_event_processed(event_id):
     """
     Checks if the event_id is recorded in processed_events.
     """
+    if event_id is None:
+        return True  # If there's no event_id, consider it "processed" or non-existent
     conn = None
     try:
         conn = get_db_connection()
@@ -255,20 +257,26 @@ def record_event_as_processed(event_id, action):
     """
     Inserts a row into processed_events with the user action or event status.
     """
+    if event_id is None:
+        return
     conn = None
     try:
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO processed_events (event_id, action, processed_timestamp) VALUES (?,?,?)',
+            '''
+            INSERT INTO processed_events (event_id, action, processed_timestamp)
+            VALUES (?, ?, ?)
+            ''',
             (event_id, action, timestamp)
         )
         conn.commit()
+        logging.info(f"Successfully recorded event {event_id} with action '{action}'")
     except sqlite3.Error as e:
-        logging.error(f"Error recording processed event {event_id}, action={action}: {e}")
+        logging.error(f"Database error while recording event {event_id}: {e}")
     except Exception as ex:
-        logging.exception(f"Unexpected error in record_event_as_processed: {ex}")
+        logging.exception(f"Unexpected error in record_event_as_processed for event {event_id}: {ex}")
     finally:
         if conn:
             conn.close()
@@ -304,14 +312,22 @@ def get_due_reminder():
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT event_id, reminder_id FROM reminders WHERE reminder_time <= ?', (current_time,))
+        logging.debug(f"Checking for due reminders at {current_time}")
+        cursor.execute(
+            '''
+            SELECT event_id, reminder_id
+            FROM reminders
+            WHERE reminder_time <= ?
+            ORDER BY reminder_time ASC
+            LIMIT 1
+            ''',
+            (current_time,)
+        )
         result = cursor.fetchone()
+        logging.debug(f"Due reminder found: {result}")
         return result if result else (None, None)
     except sqlite3.Error as e:
         logging.error(f"Error in get_due_reminder: {e}")
-        return (None, None)
-    except Exception as ex:
-        logging.exception(f"Unexpected error in get_due_reminder: {ex}")
         return (None, None)
     finally:
         if conn:
@@ -321,6 +337,8 @@ def remove_reminder(reminder_id):
     """
     Deletes the reminder row by ID once triggered or no longer needed.
     """
+    if reminder_id is None:
+        return
     conn = None
     try:
         conn = get_db_connection()
@@ -378,7 +396,6 @@ def dashboard_layout():
                                 "font-weight": "700",
                                 "color": "black",
                                 "font-size": "2.5rem",
-                                # We no longer put the border here on the H1 directly
                                 "margin": "0"
                             },
                         ),
@@ -409,9 +426,6 @@ def dashboard_layout():
                         "background-color": PRIMARY_COLOR,
                         "border": "2px solid black",
                         "border-radius": "10px 10px 0 0",
-                        #"padding": "0.5rem 0.5rem",
-                        # If you want a fixed height, uncomment below:
-                        # "height": "65px",
                     }
                 ),
                 width=12
@@ -602,7 +616,7 @@ def dashboard_layout():
                 dbc.ModalFooter([
                     dbc.Button(
                         "Yes",
-                        id="enable-fan-filterstate",  # <--- This is critical!
+                        id="enable-fan-filterstate",
                         color="success",
                         className="me-2",
                         style={"width":"170px"}
@@ -772,11 +786,11 @@ def historical_conditions_layout():
     )
 
     return dbc.Container([
-        # >>>> ADDED: "Back to Dashboard" button in the top-left <<<<
         dbc.Row([
             dbc.Col(
                 dcc.Link(
-                    dbc.Button("View Current Conditions", size="sm", style = {"color": "white", "background-color": "#6e6e6d", "border": "#6e6e6d"}),
+                    dbc.Button("View Current Conditions", size="sm",
+                               style={"color": "white", "background-color": "#6e6e6d", "border": "#6e6e6d"}),
                     href="/"
                 ),
                 width="auto"
@@ -871,7 +885,6 @@ app.layout = html.Div(
     ],
     Input('interval-component','n_intervals')
 )
-
 def update_dashboard(n):
     """
     Periodically fetches the latest indoor/outdoor data from the database,
@@ -1038,7 +1051,7 @@ def update_dashboard(n):
 def update_filter_status(n_intervals):
     """
     Periodically checks if filter_state is 'ON' or 'OFF'
-    and updates the text & style, WITHOUT any bubble/oval shape.
+    and updates the text & style.
     """
     try:
         _, filter_state = get_last_filter_state()
@@ -1046,7 +1059,6 @@ def update_filter_status(n_intervals):
         logging.exception(f"Error retrieving filter_state: {e}")
         filter_state = "UNKNOWN"
 
-    # We’ll define a base style that matches the outer box
     base_style = {
         "border": "2px solid black",
         "padding": "5px",
@@ -1067,15 +1079,10 @@ def update_filter_status(n_intervals):
     }
 
     if filter_state == "ON":
-        # Let’s just make the text white if ON:
         return "Filter Is On", {**base_style, "color": "green"}
-
     elif filter_state == "OFF":
-        # Let’s make the text red if OFF:
         return "Filter Is Off", {**base_style, "color": "red"}
-
     else:
-        # Unknown => yellow text
         return "Status Unknown", {**base_style, "color": "yellow"}
 
 ###################################################
@@ -1087,9 +1094,6 @@ def update_filter_status(n_intervals):
         Output("on-alert-shown", "data"),
         Output("modal-disclaimer", "is_open"),
         Output("modal-caution", "is_open"),
-        Output("modal-open-state", "data"),
-        Output("disclaimer-modal-open", "data"),
-        Output("caution-modal-open", "data")
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -1103,14 +1107,12 @@ def update_filter_status(n_intervals):
     ],
     [
         State("on-alert-shown", "data"),
-        State("modal-open-state", "data"),
-        State("disclaimer-modal-open", "data"),
-        State("caution-modal-open", "data"),
-        State("url", "pathname")  # <-- ADDED
+        State("modal-air-quality-filterstate", "is_open"),
+        State("modal-disclaimer", "is_open"),
+        State("modal-caution", "is_open"),
     ],
-    prevent_initial_call=True           # <-- ADDED
+    prevent_initial_call=True,
 )
-
 def handle_filter_state_event(
     n_intervals,
     enable_fan_clicks,
@@ -1124,124 +1126,84 @@ def handle_filter_state_event(
     modal_open_state,
     disclaimer_open_state,
     caution_open_state,
-    pathname
 ):
-    """
-    Handles logic for showing modals, disclaimers, reminders,
-    and user choices (Yes/No/Remind).
-    """
-    if pathname != '/':
-        raise PreventUpdate
-
     triggered_id = callback_context.triggered[0]["prop_id"].split(".")[0]
-
     modal_open = modal_open_state
-    disclaim_open = disclaimer_open_state
+    disclaimer_open = disclaimer_open_state
     caution_open = caution_open_state
-    updated_alert_shown = alert_shown
-    last_filter_state = get_last_filter_state()
-    last_event_id, last_state = get_last_system_state()
-    due_reminder_event_id, reminder_id = get_due_reminder()
 
     try:
-        # Check if a reminder is due
-        if due_reminder_event_id and due_reminder_event_id == last_event_id and last_state == "ON":
+        # First, check if there's a due reminder
+        due_reminder_event_id, reminder_id = get_due_reminder()
+        if due_reminder_event_id and not modal_open:
+            logging.info(f"Triggering modal for reminder event_id={due_reminder_event_id}")
             modal_open = True
-            disclaim_open = False
-            caution_open = False
-            updated_alert_shown = True
-            remove_reminder(reminder_id)
+            remove_reminder(reminder_id)  # Clear the reminder
+            return modal_open, True, False, False
 
-        # If interval triggered, system_state=ON, event not processed
-        elif triggered_id == "interval-component" and last_state == "ON" and last_filter_state == "OFF" and last_event_id:
-            if not is_event_processed(last_event_id):
-                modal_open = True
-                disclaim_open = False
-                caution_open = False
-                updated_alert_shown = True
-                record_event_as_processed(last_event_id, "SHOWING_MODAL")
+        # >>> FIX ADDED: Check if a new "ON" has been inserted into system_control
+        last_event_id, last_system_input = get_last_system_state()
+        if (
+            last_system_input == "ON" and
+            not is_event_processed(last_event_id) and
+            not modal_open
+        ):
+            logging.info(f"Detected new ON in system_control (event_id={last_event_id}). Opening modal.")
+            modal_open = True
+            record_event_as_processed(last_event_id, "modal_opened")
+            return modal_open, True, disclaimer_open, caution_open
+        # <<< End fix
 
-        # Handle user clicks in the modal
+        # Handle user clicks inside the modals
         if triggered_id == "enable-fan-filterstate":
-            # USER CLICKED "YES" => Insert "ON" in user_control
-            update_user_control_decision("ON")  # <--- This calls the DB insert
-            modal_open = False
-            disclaim_open = False
-            caution_open = False
-            if last_event_id:
-                record_event_as_processed(last_event_id, "ON")
-
-        elif triggered_id == "keep-fan-off-filterstate":
-            # user clicked "No, keep fan off" => show disclaimer
-            modal_open = False
-            disclaim_open = True
-            caution_open = False
-            if last_event_id:
-                record_event_as_processed(last_event_id, "DISCLAIMER")
-
-        elif triggered_id == "remind-me-filterstate":
-            # "Remind me in 20 mins"
-            modal_open = False
-            disclaim_open = False
-            caution_open = False
-            if last_event_id:
-                add_reminder(last_event_id, 20, "20 minutes")
-                record_event_as_processed(last_event_id, "REMIND_20")
-
-        elif triggered_id == "remind-me-hour-filterstate":
-            # "Remind me in an hour"
-            modal_open = False
-            disclaim_open = False
-            caution_open = False
-            if last_event_id:
-                add_reminder(last_event_id, 60, "1 hour")
-                record_event_as_processed(last_event_id, "REMIND_60")
-
-        elif triggered_id == "disclaimer-yes":
-            # user insisted on no fan
-            modal_open = False
-            disclaim_open = False
-            caution_open = True
-            update_user_control_decision("OFF")
-            if last_event_id:
-                record_event_as_processed(last_event_id, "OFF")
-
-        elif triggered_id == "disclaimer-no":
-            # user changed mind => Turn fan ON
             update_user_control_decision("ON")
             modal_open = False
-            disclaim_open = False
-            caution_open = False
-            if last_event_id:
-                record_event_as_processed(last_event_id, "ON")
+            record_event_as_processed(last_event_id, "User enabled fan")
+            return modal_open, True, False, False
+
+        elif triggered_id == "keep-fan-off-filterstate":
+            modal_open = False
+            record_event_as_processed(last_event_id, "User selected no on first modal")
+            disclaimer_open = True
+            return modal_open, True, disclaimer_open, False
+
+        elif triggered_id == "remind-me-filterstate":
+            # We'll reuse the due_reminder_event_id if it exists;
+            # otherwise, we just skip adding a reminder for None
+            add_reminder(due_reminder_event_id, 20, "20 minutes")
+            record_event_as_processed(last_event_id, "User selected to be reminded in 20 minutes")
+            modal_open = False
+            return modal_open, True, False, False
+
+        elif triggered_id == "remind-me-hour-filterstate":
+            add_reminder(due_reminder_event_id, 60, "1 hour")
+            record_event_as_processed(last_event_id, "User selected to be reminded in an hour")
+            modal_open = False
+            return modal_open, True, False, False
+
+        elif triggered_id == "disclaimer-yes":
+            update_user_control_decision("OFF")
+            record_event_as_processed(last_event_id, "User selected to keep fan off again on disclaimer")
+            disclaimer_open = False
+            caution_open = True
+            return False, True, disclaimer_open, caution_open
+
+        elif triggered_id == "disclaimer-no":
+            update_user_control_decision("ON")
+            record_event_as_processed(last_event_id, "User changed mind and turned fan on in disclaimer")
+            disclaimer_open = False
+            return False, True, disclaimer_open, False
 
         elif triggered_id == "caution-close":
-            # user closed the caution modal
-            modal_open = False
-            disclaim_open = False
             caution_open = False
+            record_event_as_processed(last_event_id, "User closed the caution")
+            return False, True, False, caution_open
 
-        return (
-            modal_open,
-            updated_alert_shown,
-            disclaim_open,
-            caution_open,
-            modal_open,
-            disclaim_open,
-            caution_open
-        )
+        return modal_open, alert_shown, disclaimer_open, caution_open
+
     except Exception as ex:
         logging.exception(f"Error in handle_filter_state_event callback: {ex}")
-        # Return stored states so you don't break everything
-        return (
-            modal_open_state,
-            alert_shown,
-            disclaimer_open_state,
-            caution_open_state,
-            modal_open_state,
-            disclaimer_open_state,
-            caution_open_state
-        )
+        return modal_open_state, alert_shown, disclaimer_open_state, caution_open_state
 
 ###################################################
 # ROUTING
