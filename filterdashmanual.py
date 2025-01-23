@@ -285,6 +285,8 @@ def add_reminder(event_id, delay_minutes, reminder_type):
     """
     Inserts a future reminder for the given event_id.
     """
+    if event_id is None:
+        return
     conn = None
     try:
         reminder_time = (datetime.datetime.now() + datetime.timedelta(minutes=delay_minutes)).strftime("%Y-%m-%d %H:%M:%S")
@@ -362,7 +364,7 @@ def update_user_control_decision(state):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Here is where we insert "ON" or "OFF" in the user_control table
+        # Insert the user_input (ON/OFF) in user_control table
         cursor.execute('INSERT INTO user_control (timestamp, user_input) VALUES (?,?)', (timestamp, state))
         conn.commit()
     except sqlite3.Error as e:
@@ -421,7 +423,6 @@ def dashboard_layout():
                         ),
                     ],
                     style={
-                        # Now the containing box itself has the border and color
                         "position": "relative",
                         "background-color": PRIMARY_COLOR,
                         "border": "2px solid black",
@@ -577,8 +578,8 @@ def dashboard_layout():
 
         dbc.Row([
             html.Div(
-                "Status Loading...",  # <--- The text
-                id="filter-status-text",  # <--- The ID is now on the outer box
+                "Status Loading...",
+                id="filter-status-text",
                 style={
                     "border": "2px solid black",
                     "padding": "5px",
@@ -1141,7 +1142,7 @@ def handle_filter_state_event(
             remove_reminder(reminder_id)  # Clear the reminder
             return modal_open, True, False, False
 
-        # >>> FIX ADDED: Check if a new "ON" has been inserted into system_control
+        # Check if a new "ON" has been inserted into system_control
         last_event_id, last_system_input = get_last_system_state()
         if (
             last_system_input == "ON" and
@@ -1152,7 +1153,6 @@ def handle_filter_state_event(
             modal_open = True
             record_event_as_processed(last_event_id, "modal_opened")
             return modal_open, True, disclaimer_open, caution_open
-        # <<< End fix
 
         # Handle user clicks inside the modals
         if triggered_id == "enable-fan-filterstate":
@@ -1167,19 +1167,33 @@ def handle_filter_state_event(
             disclaimer_open = True
             return modal_open, True, disclaimer_open, False
 
+        # >>> FIX REMINDER: do NOT set user_input to ON when user selects remind me.
         elif triggered_id == "remind-me-filterstate":
-            # We'll reuse the due_reminder_event_id if it exists;
-            # otherwise, we just skip adding a reminder for None
-            add_reminder(due_reminder_event_id, 20, "20 minutes")
+            # If we do not have an event from get_due_reminder, use the last_event_id
+            # so that we set the reminder for the correct event that triggered this modal.
+            event_for_reminder = due_reminder_event_id or last_event_id
+
+            # Insert a future reminder for that event
+            add_reminder(event_for_reminder, 20, "20 minutes")
+
+            # The user is choosing "Remind me," so we do NOT turn the fan on:
+            # in fact, let's explicitly set user_input="OFF" to stay off
+            update_user_control_decision("OFF")
+
             record_event_as_processed(last_event_id, "User selected to be reminded in 20 minutes")
             modal_open = False
             return modal_open, True, False, False
 
         elif triggered_id == "remind-me-hour-filterstate":
-            add_reminder(due_reminder_event_id, 60, "1 hour")
+            event_for_reminder = due_reminder_event_id or last_event_id
+
+            add_reminder(event_for_reminder, 60, "1 hour")
+            update_user_control_decision("OFF")
+
             record_event_as_processed(last_event_id, "User selected to be reminded in an hour")
             modal_open = False
             return modal_open, True, False, False
+        # <<< end fix for reminders
 
         elif triggered_id == "disclaimer-yes":
             update_user_control_decision("OFF")
