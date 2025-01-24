@@ -389,7 +389,7 @@ def dashboard_layout():
             dbc.Col(
                 html.Div(
                     [
-                        # The title itself
+                        # The title
                         html.H1(
                             "CURRENT CONDITIONS",
                             className="text-center mb-0",
@@ -406,7 +406,7 @@ def dashboard_layout():
                             dcc.Link(
                                 dbc.Button(
                                     "View Historical",
-                                    size="sm",  # make it smaller
+                                    size="sm",
                                     style={
                                         "background-color": "#6e6e6d",
                                         "color": "white",
@@ -709,6 +709,32 @@ def dashboard_layout():
             backdrop='static',
             keyboard=False
         ),
+
+        # >>> ADDED for reminder-cancelled: new modal
+        dbc.Modal(
+            [
+                dbc.ModalHeader(
+                    html.H4("REMINDER CANCELLED", style={'color': 'red'}),
+                    className="bg-light"
+                ),
+                dbc.ModalBody(
+                    "The system no longer thinks the filter should be running. "
+                    "We'll discard this reminder and will not prompt you again.",
+                    style={'backgroundColor': '#f0f0f0', 'color': 'black'}
+                ),
+                dbc.ModalFooter([
+                    dbc.Button("OK", id="reminder-cancel-close", color="secondary", style={"width": "100px"})
+                ])
+            ],
+            id="modal-reminder-cancelled",
+            is_open=False,
+            size="lg",
+            centered=True,
+            backdrop='static',
+            keyboard=False
+        ),
+        # <<< end new modal
+
     ], fluid=True, className="p-4")
 
 
@@ -868,6 +894,8 @@ app.layout = html.Div(
         dcc.Store(id="modal-open-state", data=False),
         dcc.Store(id="disclaimer-modal-open", data=False),
         dcc.Store(id="caution-modal-open", data=False),
+        # >>> ADDED for reminder-cancelled: we'll just open it from the callback, no store needed
+        # but we do need an output in the callback. We'll handle that there.
 
         # The main page rendering container
         html.Div(id="page-content", style={"outline": "none"}),
@@ -1095,6 +1123,8 @@ def update_filter_status(n_intervals):
         Output("on-alert-shown", "data"),
         Output("modal-disclaimer", "is_open"),
         Output("modal-caution", "is_open"),
+        # >>> ADDED for reminder-cancelled
+        Output("modal-reminder-cancelled", "is_open"),
     ],
     [
         Input("interval-component", "n_intervals"),
@@ -1105,12 +1135,14 @@ def update_filter_status(n_intervals):
         Input("disclaimer-yes", "n_clicks"),
         Input("disclaimer-no", "n_clicks"),
         Input("caution-close", "n_clicks"),
+        Input("reminder-cancel-close", "n_clicks"),  # new close button
     ],
     [
         State("on-alert-shown", "data"),
         State("modal-air-quality-filterstate", "is_open"),
         State("modal-disclaimer", "is_open"),
         State("modal-caution", "is_open"),
+        State("modal-reminder-cancelled", "is_open"),
     ],
     prevent_initial_call=True,
 )
@@ -1123,101 +1155,110 @@ def handle_filter_state_event(
     disclaimer_yes_clicks,
     disclaimer_no_clicks,
     caution_close_clicks,
+    reminder_cancel_close_clicks,  # new
     alert_shown,
     modal_open_state,
     disclaimer_open_state,
     caution_open_state,
+    reminder_cancel_open_state
 ):
     triggered_id = callback_context.triggered[0]["prop_id"].split(".")[0]
     modal_open = modal_open_state
     disclaimer_open = disclaimer_open_state
     caution_open = caution_open_state
+    reminder_cancel_open = reminder_cancel_open_state
 
     try:
         # First, check if there's a due reminder
         due_reminder_event_id, reminder_id = get_due_reminder()
-        if due_reminder_event_id and not modal_open:
-            logging.info(f"Triggering modal for reminder event_id={due_reminder_event_id}")
-            modal_open = True
-            remove_reminder(reminder_id)  # Clear the reminder
-            return modal_open, True, False, False
+        if due_reminder_event_id and not modal_open and not reminder_cancel_open:
+            # >>> ADDED: logic to check if system_control is still ON
+            # If system_control is not ON, we show the "reminder cancelled" modal.
+            # Else, we show the degrade modal as normal.
+            current_event_id, current_system_input = get_last_system_state()
+            if current_system_input == "ON":
+                logging.info(f"Triggering degrade modal for reminder event_id={due_reminder_event_id}")
+                modal_open = True
+                remove_reminder(reminder_id)  # remove the reminder row
+                return modal_open, True, False, False, False
+            else:
+                # System is not ON => show "reminder cancelled" modal
+                logging.info(f"Reminder cancelled because system_input={current_system_input}")
+                reminder_cancel_open = True
+                remove_reminder(reminder_id)
+                return False, True, False, False, reminder_cancel_open
 
         # Check if a new "ON" has been inserted into system_control
         last_event_id, last_system_input = get_last_system_state()
         if (
             last_system_input == "ON" and
             not is_event_processed(last_event_id) and
-            not modal_open
+            not modal_open and
+            not reminder_cancel_open
         ):
             logging.info(f"Detected new ON in system_control (event_id={last_event_id}). Opening modal.")
             modal_open = True
             record_event_as_processed(last_event_id, "modal_opened")
-            return modal_open, True, disclaimer_open, caution_open
+            return modal_open, True, disclaimer_open, caution_open, reminder_cancel_open
 
         # Handle user clicks inside the modals
         if triggered_id == "enable-fan-filterstate":
             update_user_control_decision("ON")
             modal_open = False
             record_event_as_processed(last_event_id, "User enabled fan")
-            return modal_open, True, False, False
+            return modal_open, True, False, False, False
 
         elif triggered_id == "keep-fan-off-filterstate":
             modal_open = False
             record_event_as_processed(last_event_id, "User selected no on first modal")
             disclaimer_open = True
-            return modal_open, True, disclaimer_open, False
+            return modal_open, True, disclaimer_open, False, False
 
-        # >>> FIX REMINDER: do NOT set user_input to ON when user selects remind me.
         elif triggered_id == "remind-me-filterstate":
-            # If we do not have an event from get_due_reminder, use the last_event_id
-            # so that we set the reminder for the correct event that triggered this modal.
             event_for_reminder = due_reminder_event_id or last_event_id
-
-            # Insert a future reminder for that event
             add_reminder(event_for_reminder, 20, "20 minutes")
-
-            # The user is choosing "Remind me," so we do NOT turn the fan on:
-            # in fact, let's explicitly set user_input="OFF" to stay off
             update_user_control_decision("OFF")
-
             record_event_as_processed(last_event_id, "User selected to be reminded in 20 minutes")
             modal_open = False
-            return modal_open, True, False, False
+            return modal_open, True, False, False, False
 
         elif triggered_id == "remind-me-hour-filterstate":
             event_for_reminder = due_reminder_event_id or last_event_id
-
             add_reminder(event_for_reminder, 60, "1 hour")
             update_user_control_decision("OFF")
-
             record_event_as_processed(last_event_id, "User selected to be reminded in an hour")
             modal_open = False
-            return modal_open, True, False, False
-        # <<< end fix for reminders
+            return modal_open, True, False, False, False
 
         elif triggered_id == "disclaimer-yes":
             update_user_control_decision("OFF")
             record_event_as_processed(last_event_id, "User selected to keep fan off again on disclaimer")
             disclaimer_open = False
             caution_open = True
-            return False, True, disclaimer_open, caution_open
+            return False, True, disclaimer_open, caution_open, False
 
         elif triggered_id == "disclaimer-no":
             update_user_control_decision("ON")
             record_event_as_processed(last_event_id, "User changed mind and turned fan on in disclaimer")
             disclaimer_open = False
-            return False, True, disclaimer_open, False
+            return False, True, disclaimer_open, False, False
 
         elif triggered_id == "caution-close":
             caution_open = False
             record_event_as_processed(last_event_id, "User closed the caution")
-            return False, True, False, caution_open
+            return False, True, False, caution_open, False
 
-        return modal_open, alert_shown, disclaimer_open, caution_open
+        # >>> ADDED for reminder-cancelled close
+        elif triggered_id == "reminder-cancel-close":
+            reminder_cancel_open = False
+            return False, True, False, False, reminder_cancel_open
+
+        return modal_open, alert_shown, disclaimer_open, caution_open, reminder_cancel_open
 
     except Exception as ex:
         logging.exception(f"Error in handle_filter_state_event callback: {ex}")
-        return modal_open_state, alert_shown, disclaimer_open_state, caution_open_state
+        # Return defaults if there's an error
+        return modal_open_state, alert_shown, disclaimer_open_state, caution_open_state, reminder_cancel_open_state
 
 ###################################################
 # ROUTING
