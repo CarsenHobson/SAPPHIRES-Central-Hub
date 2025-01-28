@@ -699,9 +699,20 @@ def update_dashboard(n):
     try:
         # Query PM data
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
-        outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
+        indoor_temp_df = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        outdoor_pm_values = [
+            pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 60;", conn)['pm25'].mean()
+            for i in ["One", "Two", "Three", "Four"]
+        ]
+
+        outdoor_temp_values = [
+            pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 1;", conn)[
+                'temperature'].iloc[0]
+            for i in ["One", "Two", "Three", "Four"]
+        ]
+
+        outdoor_pm = sum(outdoor_pm_values) / len(outdoor_pm_values)
+        outdoor_temp_df = sum(outdoor_temp_values) / len(outdoor_temp_values)
         conn.close()
 
         # Defaults
@@ -739,10 +750,10 @@ def update_dashboard(n):
             indoor_temp_text = f"{indoor_temp_value} °F"
 
         # Outdoor
-        if not outdoor_pm.empty:
-            outdoor_aqi = round(outdoor_pm['pm25'].iloc[0])
-            if len(outdoor_pm) > 30:
-                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25'].iloc[30:].mean())
+        if not outdoor_pm is None :
+            outdoor_aqi = round(outdoor_pm)
+            if len(str(outdoor_pm)) > 30:
+                outdoor_delta = outdoor_aqi - round(outdoor_pm)
             outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
             if outdoor_delta > 0:
                 outdoor_arrow = "⬆️"
@@ -754,8 +765,8 @@ def update_dashboard(n):
                 outdoor_arrow = "--"
                 outdoor_arrow_color = "grey"
 
-        if not outdoor_temp_df.empty:
-            outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
+        if not outdoor_temp_df is None:
+            outdoor_temp_value = round(outdoor_temp_df, 1)
             outdoor_temp_text = f"{outdoor_temp_value} °F"
 
         max_aqi = max(indoor_aqi, outdoor_aqi, 100)
