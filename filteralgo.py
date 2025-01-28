@@ -6,7 +6,6 @@ import sqlite3
 # Constants
 DATABASE_FILE_PATH = 'SAPPHIRESautomated.db' #Use the appropriate database for the state of the study
 #DATABASE_FILE_PATH = 'SAPPHIRESmanual.db'
-
 WINDOW_SIZE = 20  # Number of readings to consider
 TABLES = ['Outdoor_One', 'Outdoor_Two', 'Outdoor_Three', 'Outdoor_Four']
 
@@ -118,7 +117,7 @@ def insert_relay_state():
     try:
         current_time_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor.execute('''
-            INSERT INTO filter_state (timestamp, filter_state) 
+            INSERT INTO system_control (timestamp, system_input) 
             VALUES (?, ?)
         ''', (current_time_str, current_relay_state))
         connection.commit()
@@ -137,7 +136,7 @@ if __name__ == "__main__":
     try:
         # Fetch the most recent relay state from the database when script starts
         current_relay_state = get_last_relay_state()
-        print(f"Initial relay state: {current_relay_state}")
+        print(f"Initial filter state: {current_relay_state}")
 
         # Check rising edge for each table
         for table in TABLES:
