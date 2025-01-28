@@ -14,7 +14,7 @@ import logging
 # GLOBAL CONFIGURATION & CONSTANTS
 ###################################################
 
-DB_PATH = '/home/mainhubs/SAPPHIRES.db'  # Adjust if needed
+DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'  # Adjust if needed
 
 EXTERNAL_STYLESHEETS = [
     dbc.themes.BOOTSTRAP,
@@ -58,64 +58,6 @@ def get_db_connection():
         logging.error(f"Error connecting to database at {DB_PATH}: {e}")
         return None
 
-def create_tables():
-    """
-    Create the necessary tables if they do not exist.
-    Ensures the environment is ready for data storage.
-    """
-    create_tables_script = """
-    CREATE TABLE IF NOT EXISTS Indoor (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        pm25 REAL,
-        temperature REAL,
-        humidity REAL
-    );
-
-    CREATE TABLE IF NOT EXISTS baseline (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        baseline_value REAL
-    );
-
-    CREATE TABLE IF NOT EXISTS user_control (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        user_input TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS filter_state (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        filter_state TEXT
-    );
-
-    CREATE TABLE IF NOT EXISTS Outdoor (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp TEXT,
-        pm25_value REAL,
-        temperature REAL,
-        humidity REAL,
-        wifi_strength REAL
-    );
-    """
-    conn = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            logging.error("create_tables: Cannot proceed (no DB connection).")
-            return
-        cursor = conn.cursor()
-        cursor.executescript(create_tables_script)
-        conn.commit()
-        logging.info("Tables created or verified successfully.")
-    except sqlite3.Error as e:
-        logging.error(f"Error creating tables: {e}")
-    except Exception as ex:
-        logging.exception(f"Unexpected error in create_tables: {ex}")
-    finally:
-        if conn:
-            conn.close()
 
 def encode_image(image_path):
     """
@@ -217,30 +159,55 @@ def update_fan_state(state):
         if conn:
             conn.close()
 
-def get_spacing(aqi_length, delta_length):
+def get_spacing(aqi, delta):
     """
-    Predefined spacing values for textual alignment. 
-    If invalid inputs, we raise ValueError (which is caught in the calling function).
+    Dynamically spaces the AQI & delta text and arrow.
     """
-    spacing_values = {
-        (1, 1): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-        # ... repeated for all combos (they are all 0 in your example) ...
-        (4, 4): {"aqi_x_coord": 0, "delta_x_coord": 0, "arrow_coord": 0, "aqi_font": 0, "delta_font": 0, "arrow_size": 0},
-    }
-    key = (aqi_length, delta_length)
-    if key not in spacing_values:
-        # Log it and raise
-        logging.warning(f"Invalid combo aqi_length={aqi_length}, delta_length={delta_length}. Using fallback spacing.")
-        return 0, 0, 0, 0, 0, 0
-    values = spacing_values[key]
-    return (
-        values["aqi_x_coord"],
-        values["delta_x_coord"],
-        values["arrow_coord"],
-        values["aqi_font"],
-        values["delta_font"],
-        values["arrow_size"],
-    )
+    aqi_digits = len(str(abs(aqi)))
+    delta_digits = len(str(abs(int(delta))))
+
+    if delta == 0:
+        spacing_values = {
+            (1, 1): {"aqi_x_coord": 0.45, "delta_x_coord": 0.73, "arrow_coord": 0.654, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (2, 1): {"aqi_x_coord": 0.45, "delta_x_coord": 0.76, "arrow_coord": 0.724, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (3, 1): {"aqi_x_coord": 0.445, "delta_x_coord": 0.78, "arrow_coord": 0.755, "aqi_font": 30, "delta_font": 20,"arrow_size": 30},
+            (4, 1): {"aqi_x_coord": 0.445, "delta_x_coord": 0.81, "arrow_coord": 0.775, "aqi_font": 30,"delta_font": 20, "arrow_size": 30},
+        }
+    else:
+        spacing_values = {
+            (1, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.73, "arrow_coord": 0.61, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 2): {"aqi_x_coord": 0.42, "delta_x_coord": 0.74,"arrow_coord": 0.6, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.775, "arrow_coord": 0.58, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (1, 4): {"aqi_x_coord": 0.375, "delta_x_coord": 0.79, "arrow_coord": 0.56, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 1): {"aqi_x_coord": 0.43, "delta_x_coord": 0.76, "arrow_coord": 0.69, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 2): {"aqi_x_coord": 0.415, "delta_x_coord": 0.775, "arrow_coord": 0.67, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 3): {"aqi_x_coord": 0.4, "delta_x_coord": 0.8, "arrow_coord": 0.605, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (2, 4): {"aqi_x_coord": 0.38, "delta_x_coord": 0.81, "arrow_coord": 0.57, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (3, 1): {"aqi_x_coord": 0.42, "delta_x_coord": 0.78, "arrow_coord": 0.71, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (3, 2): {"aqi_x_coord": 0.41, "delta_x_coord": 0.81, "arrow_coord": 0.7, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (3, 3): {"aqi_x_coord": 0.395, "delta_x_coord": 0.802, "arrow_coord": 0.608, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (3, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.82, "arrow_coord": 0.58, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (4, 1): {"aqi_x_coord": 0.415, "delta_x_coord": 0.81, "arrow_coord": 0.735, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (4, 2): {"aqi_x_coord": 0.4, "delta_x_coord": 0.83, "arrow_coord": 0.72, "aqi_font": 30, "delta_font": 20, "arrow_size": 30},
+            (4, 3): {"aqi_x_coord": 0.38, "delta_x_coord": 0.83, "arrow_coord": 0.63, "aqi_font": 27, "delta_font": 20, "arrow_size": 29},
+            (4, 4): {"aqi_x_coord": 0.37, "delta_x_coord": 0.84, "arrow_coord": 0.6, "aqi_font": 26, "delta_font": 20, "arrow_size": 28},
+        }
+
+    key = (aqi_digits, delta_digits)
+    if key in spacing_values:
+        v = spacing_values[key]
+        return (
+            v["aqi_x_coord"],
+            v["delta_x_coord"],
+            v["arrow_coord"],
+            v["aqi_font"],
+            v["delta_font"],
+            v["arrow_size"]
+        )
+    else:
+        raise ValueError(
+            f"Invalid combination of aqi_length ({aqi_digits}) and delta_length ({delta_digits})."
+        )
 
 def get_fallback_gauge():
     """Return a minimal gauge figure if DB queries fail or data is missing."""
@@ -256,30 +223,58 @@ def get_fallback_gauge():
 
 def dashboard_layout():
     """
-    Constructs the main dashboard layout.
-    Includes fan control button and modals.
+    Constructs the main dashboard layout with all modals/buttons.
     """
     last_state = get_last_fan_state()
     button_text = "Enable Fan" if last_state == "OFF" else "Disable Fan"
 
     return dbc.Container([
-        # Title Row
+        # Title row with embedded button
         dbc.Row([
             dbc.Col(
-                html.H1(
-                    "CURRENT CONDITIONS",
-                    className="text-center mb-0",
+                html.Div(
+                    [
+                        # The title itself
+                        html.H1(
+                            "CURRENT CONDITIONS",
+                            className="text-center mb-0",
+                            style={
+                                "font-family": "Roboto, sans-serif",
+                                "font-weight": "700",
+                                "color": "black",
+                                "font-size": "2.5rem",
+                                "margin": "0"
+                            },
+                        ),
+                        # The smaller, grey button in the top-right corner
+                        html.Div(
+                            dcc.Link(
+                                dbc.Button(
+                                    "View Historical",
+                                    size="sm",  # make it smaller
+                                    style={
+                                        "background-color": "#6e6e6d",
+                                        "color": "white",
+                                        "border": "#6e6e6d"
+                                    },
+                                ),
+                                href="/historical",
+                            ),
+                            style={
+                                "position": "absolute",
+                                "top": "10px",
+                                "right": "10px",
+                            },
+                        ),
+                    ],
                     style={
-                        "font-family": "Roboto, sans-serif",
-                        "font-weight": "700",
-                        "color": "black",
-                        "font-size": "2.5rem",
+                        "position": "relative",
                         "background-color": PRIMARY_COLOR,
-                        "padding": "0",
                         "border": "2px solid black",
-                        "border-radius": "10px 10px 0 0"
+                        "border-radius": "10px 10px 0 0",
                     }
-                ), width=12
+                ),
+                width=12
             )
         ], className="g-0"),
 
@@ -503,34 +498,31 @@ def dashboard_layout():
 
 def historical_conditions_layout():
     """
-    Constructs the historical conditions layout, with line charts of indoor and outdoor PM readings.
-    Includes error handling and defaults if data unavailable.
+    Constructs the historical conditions layout.
     """
     conn = None
     try:
         conn = get_db_connection()
-        if not conn:
-            logging.error("No DB connection in historical_conditions_layout; returning empty data.")
-            indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
-            outdoor_data = pd.DataFrame(columns=["timestamp", "pm25_value"])
-        else:
-            indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 500;", conn)
-            outdoor_data = pd.read_sql("SELECT timestamp, pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 500;", conn)
+        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 100;", conn)
+        outdoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 100;", conn)
     except Exception as e:
         logging.exception(f"Error retrieving historical data: {e}")
         indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
-        outdoor_data = pd.DataFrame(columns=["timestamp", "pm25_value"])
+        outdoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
     finally:
         if conn:
             conn.close()
 
-    # Convert timestamps
     if not indoor_data.empty:
         indoor_data['timestamp'] = pd.to_datetime(indoor_data['timestamp'])
+    else:
+        logging.warning("No indoor data found for historical layout.")
+
     if not outdoor_data.empty:
         outdoor_data['timestamp'] = pd.to_datetime(outdoor_data['timestamp'])
+    else:
+        logging.warning("No outdoor data found for historical layout.")
 
-    # Build figure
     fig = go.Figure()
     if not indoor_data.empty:
         fig.add_trace(go.Scatter(
@@ -544,7 +536,7 @@ def historical_conditions_layout():
     if not outdoor_data.empty:
         fig.add_trace(go.Scatter(
             x=outdoor_data['timestamp'],
-            y=outdoor_data['pm25_value'],
+            y=outdoor_data['pm25'],
             mode='lines',
             name='Outdoor PM',
             line=dict(color='blue', width=2, shape='spline'),
@@ -579,6 +571,17 @@ def historical_conditions_layout():
     )
 
     return dbc.Container([
+        dbc.Row([
+            dbc.Col(
+                dcc.Link(
+                    dbc.Button("View Current Conditions", size="sm",
+                               style={"color": "white", "background-color": "#6e6e6d", "border": "#6e6e6d"}),
+                    href="/"
+                ),
+                width="auto"
+            )
+        ], style={"margin-top": "10px"}),
+
         dbc.Row(dbc.Col(html.H1("Historical Conditions", className="text-center mb-4"))),
         dbc.Row(dbc.Col(dcc.Graph(figure=fig, config={"displayModeBar": False}))),
     ], fluid=True, className="p-4")
@@ -586,8 +589,6 @@ def historical_conditions_layout():
 ###################################################
 # APP INITIALIZATION
 ###################################################
-
-create_tables()
 
 app = dash.Dash(
     __name__,
@@ -682,123 +683,158 @@ def display_page(pathname):
 )
 def update_dashboard(n):
     """
-    Periodically fetches the latest indoor/outdoor data from the database and updates:
-    - Indoor/Outdoor AQI gauges
-    - Indoor/Outdoor temperature displays
-    Provides fallback figures and logs errors if DB queries fail.
+    Periodically fetches the latest indoor/outdoor data from the database,
+    updates the gauge figures and temp displays.
     """
-    conn = None
     try:
         conn = get_db_connection()
-        if not conn:
-            logging.error("update_dashboard: Could not connect to DB, returning fallback.")
-            return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
+    except Exception as e:
+        logging.exception(f"update_dashboard: DB connection failed: {e}")
+        return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
-        # default values
+    if conn is None:
+        logging.error("update_dashboard: Could not get DB connection (conn is None).")
+        return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
+
+    try:
+        # Query PM data
+        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
+        outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
+        conn.close()
+
+        # Defaults
         indoor_aqi = 0
         outdoor_aqi = 0
         indoor_temp_text = "N/A"
         outdoor_temp_text = "N/A"
-        indoor_arrow = "⬇️"
-        outdoor_arrow = "⬇️"
-        indoor_arrow_color = "green"
-        outdoor_arrow_color = "green"
+        indoor_delta = 0
+        outdoor_delta = 0
+        indoor_arrow = "--"
+        outdoor_arrow = "--"
+        indoor_arrow_color = "grey"
+        outdoor_arrow_color = "grey"
         indoor_delta_text = "0"
         outdoor_delta_text = "0"
 
-        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        outdoor_pm = pd.read_sql("SELECT pm25_value FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        # Indoor
+        if not indoor_pm.empty:
+            indoor_aqi = round(indoor_pm['pm25'].iloc[0])
+            if len(indoor_pm) > 30:
+                indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
+            indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
+            if indoor_delta > 0:
+                indoor_arrow = "⬆️"
+                indoor_arrow_color = "red"
+            elif indoor_delta < 0:
+                indoor_arrow = "⬇️"
+                indoor_arrow_color = "green"
+            else:
+                indoor_arrow = "--"
+                indoor_arrow_color = "grey"
 
-        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
-        outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
-    except Exception as e:
-        logging.exception(f"Error retrieving data in update_dashboard: {e}")
-        # Return fallback
-        return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
-    finally:
-        if conn:
-            conn.close()
+        if not indoor_temp_df.empty:
+            indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
+            indoor_temp_text = f"{indoor_temp_value} °F"
 
-    # Compute indoor AQI
-    if not indoor_pm.empty:
-        indoor_aqi = round(indoor_pm['pm25'].iloc[0])
-        if len(indoor_pm) > 30:
-            indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
-        else:
-            indoor_delta = 0
-        indoor_delta_text = f"+{indoor_delta}" if indoor_delta > 0 else str(indoor_delta)
-        indoor_arrow = "⬆️" if indoor_delta > 0 else "⬇️"
-        indoor_arrow_color = "red" if indoor_delta > 0 else "green"
-    else:
-        logging.warning("No indoor_pm data found in update_dashboard.")
+        # Outdoor
+        if not outdoor_pm.empty:
+            outdoor_aqi = round(outdoor_pm['pm25'].iloc[0])
+            if len(outdoor_pm) > 30:
+                outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25'].iloc[30:].mean())
+            outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
+            if outdoor_delta > 0:
+                outdoor_arrow = "⬆️"
+                outdoor_arrow_color = "red"
+            elif outdoor_delta < 0:
+                outdoor_arrow = "⬇️"
+                outdoor_arrow_color = "green"
+            else:
+                outdoor_arrow = "--"
+                outdoor_arrow_color = "grey"
 
-    # Compute outdoor AQI
-    if not outdoor_pm.empty:
-        outdoor_aqi = round(outdoor_pm['pm25_value'].iloc[0])
-        if len(outdoor_pm) > 30:
-            outdoor_delta = outdoor_aqi - round(outdoor_pm['pm25_value'].iloc[30:].mean())
-        else:
-            outdoor_delta = 0
-        outdoor_delta_text = f"+{outdoor_delta}" if outdoor_delta > 0 else str(outdoor_delta)
-        outdoor_arrow = "⬆️" if outdoor_delta > 0 else "⬇️"
-        outdoor_arrow_color = "red" if outdoor_delta > 0 else "green"
-    else:
-        logging.warning("No outdoor_pm data found in update_dashboard.")
+        if not outdoor_temp_df.empty:
+            outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
+            outdoor_temp_text = f"{outdoor_temp_value} °F"
 
-    # Indoor temp
-    if not indoor_temp_df.empty:
-        indoor_temp_value = round(indoor_temp_df['temperature'].iloc[0], 1)
-        indoor_temp_text = f"{indoor_temp_value} °F"
-    else:
-        logging.warning("No indoor_temp_df data found in update_dashboard.")
+        max_aqi = max(indoor_aqi, outdoor_aqi, 100)
 
-    # Outdoor temp
-    if not outdoor_temp_df.empty:
-        outdoor_temp_value = round(outdoor_temp_df['temperature'].iloc[0], 1)
-        outdoor_temp_text = f"{outdoor_temp_value} °F"
-    else:
-        logging.warning("No outdoor_temp_df data found in update_dashboard.")
-
-    # Build gauge figures
-    def build_gauge(aqi_value, arrow, arrow_color, delta_text):
-        gauge = go.Figure(go.Indicator(
+        # Build Indoor gauge
+        indoor_x, indoor_dx, indoor_ax, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta)
+        indoor_fig = go.Figure(go.Indicator(
             mode="gauge",
-            value=aqi_value,
+            value=indoor_aqi,
             gauge={
-                'axis': {'range': [0, 150]},
-                'bar': {'color': get_gauge_color(aqi_value)},
+                'axis': {'range': [0, max_aqi]},
+                'bar': {'color': get_gauge_color(indoor_aqi)},
                 'bgcolor': "lightgray",
                 'bordercolor': "black",
             },
             domain={'x': [0, 1], 'y': [0, 1]}
         ))
-        gauge.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
-        # Here you can add text annotations if you desire:
-        gauge.add_annotation(
-            x=0.45, y=0.25,
-            text=f"<b>AQI:{aqi_value}</b>",
+        indoor_fig.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+        indoor_fig.add_annotation(
+            x=indoor_x, y=0.25,
+            text=f"<b>AQI:{indoor_aqi}</b>",
             showarrow=False,
-            font=dict(size=24, color="black"),
+            font=dict(size=indoor_aqi_font, color="black"),
             xanchor="center", yanchor="bottom"
         )
-        gauge.add_annotation(
-            x=0.5, y=0.24,
-            text=arrow,
-            font=dict(size=24, color=arrow_color),
+        indoor_fig.add_annotation(
+            x=indoor_ax, y=0.24 if indoor_delta != 0 else 0.26,
+            text=indoor_arrow,
+            font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
             showarrow=False
         )
-        gauge.add_annotation(
-            x=0.55, y=0.28,
-            text=delta_text,
-            font=dict(size=16, color=arrow_color),
+        if indoor_delta != 0:
+            indoor_fig.add_annotation(
+                x=indoor_dx, y=0.28,
+                text=indoor_delta_text,
+                font=dict(size=indoor_delta_font, color=indoor_arrow_color),
+                showarrow=False
+            )
+
+        # Build Outdoor gauge
+        outdoor_x, outdoor_dx, outdoor_ax, outdoor_aqi_font, outdoor_delta_font, outdoor_arrow_size = get_spacing(outdoor_aqi, outdoor_delta)
+        outdoor_fig = go.Figure(go.Indicator(
+            mode="gauge",
+            value=outdoor_aqi,
+            gauge={
+                'axis': {'range': [0, max_aqi]},
+                'bar': {'color': get_gauge_color(outdoor_aqi)},
+                'bgcolor': "lightgray",
+                'bordercolor': "black",
+            },
+            domain={'x': [0, 1], 'y': [0, 1]}
+        ))
+        outdoor_fig.update_layout(height=300, margin=dict(t=0, b=50, l=50, r=50))
+        outdoor_fig.add_annotation(
+            x=outdoor_x, y=0.25,
+            text=f"<b>AQI:{outdoor_aqi}</b>",
+            showarrow=False,
+            font=dict(size=outdoor_aqi_font, color="black"),
+            xanchor="center", yanchor="bottom"
+        )
+        outdoor_fig.add_annotation(
+            x=outdoor_ax, y=0.24 if outdoor_delta != 0 else 0.26,
+            text=outdoor_arrow,
+            font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
             showarrow=False
         )
-        return gauge
+        if outdoor_delta != 0:
+            outdoor_fig.add_annotation(
+                x=outdoor_dx, y=0.28,
+                text=outdoor_delta_text,
+                font=dict(size=outdoor_delta_font, color=outdoor_arrow_color),
+                showarrow=False
+            )
 
-    indoor_gauge = build_gauge(indoor_aqi, indoor_arrow, indoor_arrow_color, indoor_delta_text)
-    outdoor_gauge = build_gauge(outdoor_aqi, outdoor_arrow, outdoor_arrow_color, outdoor_delta_text)
+        return indoor_fig, outdoor_fig, indoor_temp_text, outdoor_temp_text
 
-    return indoor_gauge, outdoor_gauge, indoor_temp_text, outdoor_temp_text
+    except Exception as ex:
+        logging.exception(f"Error in update_dashboard callback: {ex}")
+        return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
 
 @app.callback(
