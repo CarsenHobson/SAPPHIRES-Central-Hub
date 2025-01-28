@@ -47,7 +47,7 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS Outdoor (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
-        pm25_value REAL,
+        pm25 REAL,
         temperature REAL,
         humidity REAL,
         wifi_strength REAL
