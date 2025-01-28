@@ -4,7 +4,9 @@ from datetime import datetime
 import sqlite3
 
 # Constants
-DATABASE_FILE_PATH = 'SAPPHIRES.db'
+DATABASE_FILE_PATH = 'SAPPHIRESautomated.db' #Use the appropriate database for the state of the study
+#DATABASE_FILE_PATH = 'SAPPHIRESmanual.db'
+
 WINDOW_SIZE = 20  # Number of readings to consider
 TABLES = ['Outdoor_One', 'Outdoor_Two', 'Outdoor_Three', 'Outdoor_Four']
 
