@@ -697,23 +697,42 @@ def update_dashboard(n):
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     try:
-        # Query PM data
+        # Initialize output variables with default values
+        indoor_temp_df = None
+        indoor_pm = None
+        outdoor_pm = 0  # Ensure it's always initialized
+        outdoor_temp_df = 0  # Ensure it's always initialized
+        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        indoor_temp_df = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        outdoor_pm_values = [
-            pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 60;", conn)['pm25'].mean()
-            for i in ["One", "Two", "Three", "Four"]
-        ]
+        # Query Outdoor PM data
+        outdoor_pm_values = []
+        for i in ["One", "Two", "Three", "Four"]:
+            outdoor_pm_df = pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 60;", conn)
+            if not outdoor_pm_df.empty:
+                outdoor_pm_values.append(outdoor_pm_df['pm25'].mean())
 
-        outdoor_temp_values = [
-            pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 1;", conn)[
-                'temperature'].iloc[0]
-            for i in ["One", "Two", "Three", "Four"]
-        ]
+        if outdoor_pm_values:
+            outdoor_pm = sum(outdoor_pm_values) / len(outdoor_pm_values)
+        else:
+            outdoor_pm = 0  # Default value if no PM data is available
 
-        outdoor_pm = sum(outdoor_pm_values) / len(outdoor_pm_values)
-        outdoor_temp_df = sum(outdoor_temp_values) / len(outdoor_temp_values)
+        # Query Outdoor Temperature data
+        outdoor_temp_values = []
+        for i in ["One", "Two", "Three", "Four"]:
+            outdoor_temp_df = pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 1;", conn)
+            if not outdoor_temp_df.empty:
+                outdoor_temp_values.append(outdoor_temp_df['temperature'].iloc[0])
+
+        if outdoor_temp_values:
+            outdoor_temp_df = sum(outdoor_temp_values) / len(outdoor_temp_values)
+        else:
+            outdoor_temp_df = 0  # Default value if no temperature data is available
+
         conn.close()
+
+        # Display results
+        print(f"Outdoor PM2.5 Average: {outdoor_pm}")
+        print(f"Outdoor Temperature Average: {outdoor_temp_df}")
 
         # Defaults
         indoor_aqi = 0
@@ -730,7 +749,7 @@ def update_dashboard(n):
         outdoor_delta_text = "0"
 
         # Indoor
-        if not indoor_pm.empty:
+        if not indoor_pm is None:
             indoor_aqi = round(indoor_pm['pm25'].iloc[0])
             if len(indoor_pm) > 30:
                 indoor_delta = indoor_aqi - round(indoor_pm['pm25'].iloc[30:].mean())
