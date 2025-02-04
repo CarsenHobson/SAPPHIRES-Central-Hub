@@ -10,7 +10,7 @@ MQTT_PORT = 1883
 MQTT_TOPIC = "Filter"
 
 # GPIO settings
-GPIO_PIN = 14
+GPIO_PIN = 1
 
 # Variable to track the last message received
 last_message = None
