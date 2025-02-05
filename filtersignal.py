@@ -5,8 +5,6 @@ import paho.mqtt.client as mqtt
 
 # Constants
 DB_PATH = '/home/mainhubs/SAPPHIREStest.db'
-MQTT_USERNAME = "SAPPHIRE"
-MQTT_PASSWORD = "SAPPHIRE"
 BROKER_ADDRESS = "10.42.0.1"
 MQTT_TOPIC = "filter_signal"
 RUN_DURATION = 59  # seconds to keep the loop running
@@ -65,7 +63,6 @@ def main():
     """
     # Create and configure MQTT client
     client = mqtt.Client()
-    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
     client.on_publish = on_publish
 
     # Attempt to connect to the broker
@@ -86,9 +83,10 @@ def main():
 
             # Publish only if the state is ON
             if last_filter_value.upper() == 'ON':
-                ret = client.publish(MQTT_TOPIC, "ON", qos=1)
-                logging.info(f"Publishing 'ON' to topic '{MQTT_TOPIC}'. Return code: {ret.rc}")
+                client.publish(MQTT_TOPIC, "ON", qos=1)
+                logging.info(f"Publishing 'ON' to topic '{MQTT_TOPIC}'")
             else:
+                client.publish(MQTT_TOPIC, "OFF", qos=1)
                 logging.info("Filter state is not ON; no message published.")
                 
         except Exception as e:
