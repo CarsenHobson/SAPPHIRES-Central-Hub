@@ -117,4 +117,4 @@ if __name__ == "__main__":
         # Always stop the loop and disconnect before cleaning up
         client.loop_stop()
         client.disconnect()
-        GPIO.cleanup()
+        
