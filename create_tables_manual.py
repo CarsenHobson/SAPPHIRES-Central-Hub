@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 
-DB_PATH = '/home/mainhubs/SAPPHIRESmanual.db'  # Adjust path as needed
+DB_PATH = '/home/Mainhub/SAPPHIRESmanual.db'  # Adjust path as needed
 
 def get_db_connection():
     """
