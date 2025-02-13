@@ -4,8 +4,8 @@ import sqlite3
 import board
 from adafruit_bme280 import basic as adafruit_bme280
 # Database path
-db_path = '/home/mainhubs/SAPPHIRESautomated.db'
-#db_path = '/home/mainhubs/SAPPHIRESmanual.db'
+db_path = '/home/Mainhub/SAPPHIRESautomated.db'
+#db_path = '/home/Mainhub/SAPPHIRESmanual.db'
 
 # Connect to the SQLite database
 conn = sqlite3.connect(db_path)
