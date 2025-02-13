@@ -14,7 +14,7 @@ import logging
 # GLOBAL CONFIGURATION & CONSTANTS
 ###################################################
 
-DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'  # Adjust if needed
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  # Adjust if needed
 
 EXTERNAL_STYLESHEETS = [
     dbc.themes.BOOTSTRAP,
@@ -28,12 +28,12 @@ WARNING_COLOR = "#ffc107"
 DANGER_COLOR = "#dc3545"
 
 EMOJI_PATHS = {
-    "good": "/home/mainhubs/good.png",
-    "moderate": "/home/mainhubs/moderate.png",
-    "unhealthy_sensitive": "/home/mainhubs/unhealthy_sensitive.png",
-    "unhealthy": "/home/mainhubs/unhealthy.png",
-    "very_unhealthy": "/home/mainhubs/very_unhealthy.png",
-    "hazardous": "/home/mainhubs/hazardous.png"
+    "good": "/home/Mainhub/good.png",
+    "moderate": "/home/Mainhub/moderate.png",
+    "unhealthy_sensitive": "/home/Mainhub/unhealthy_sensitive.png",
+    "unhealthy": "/home/Mainhub/unhealthy.png",
+    "very_unhealthy": "/home/Mainhub/very_unhealthy.png",
+    "hazardous": "/home/Mainhub/hazardous.png"
 }
 
 # Enhanced Logging Config
