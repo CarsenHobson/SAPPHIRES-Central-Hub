@@ -4,7 +4,7 @@ import logging
 import paho.mqtt.client as mqtt
 
 # Constants
-DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'
 BROKER_ADDRESS = "10.42.0.1"
 MQTT_TOPIC = "Filter"
 RUN_DURATION = 59  # seconds to keep the loop running
