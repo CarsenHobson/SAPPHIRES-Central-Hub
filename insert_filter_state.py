@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional, Tuple
 
-DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'  #Use the appropriate database for the state of the study
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  #Use the appropriate database for the state of the study
 logging.basicConfig(
     filename='insert_filter_state.log',
     level=logging.DEBUG,
