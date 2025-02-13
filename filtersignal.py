@@ -4,9 +4,9 @@ import logging
 import paho.mqtt.client as mqtt
 
 # Constants
-DB_PATH = '/home/mainhubs/SAPPHIREStest.db'
+DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'
 BROKER_ADDRESS = "10.42.0.1"
-MQTT_TOPIC = "filter_signal"
+MQTT_TOPIC = "Filter"
 RUN_DURATION = 59  # seconds to keep the loop running
 
 logging.basicConfig(
@@ -87,7 +87,7 @@ def main():
                 logging.info(f"Publishing 'ON' to topic '{MQTT_TOPIC}'")
             else:
                 client.publish(MQTT_TOPIC, "OFF", qos=1)
-                logging.info("Filter state is not ON; no message published.")
+                logging.info("Filter state is not ON; Published OFF")
                 
         except Exception as e:
             logging.error(f"An error occurred while processing filter state: {e}")

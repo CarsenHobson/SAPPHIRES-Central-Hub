@@ -56,7 +56,7 @@ def fetch_last_20_rows_columns(table_name):
 def read_baseline_value():
     """Read the baseline PM2.5 value from the database, defaulting to 7.5 on error."""
     try:
-        cursor.execute("SELECT baseline FROM pm25_data ORDER BY timestamp DESC LIMIT 1")
+        cursor.execute("SELECT baseline_value FROM baseline ORDER BY timestamp DESC LIMIT 1")
         rows = cursor.fetchall()
 
         if rows:
@@ -108,8 +108,7 @@ def check_rising_edge(table_name):
         print(
             f"{table_name}: Not enough data points ({len(pm25_values)} out of {WINDOW_SIZE}) or data too old. Skipping.")
 
-    if current_relay_state == 'ON':
-        insert_relay_state()
+    insert_relay_state()
 
 
 def insert_relay_state():

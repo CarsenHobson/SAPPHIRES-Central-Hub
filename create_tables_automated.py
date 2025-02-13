@@ -38,13 +38,43 @@ def create_tables():
         user_input TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS system_control (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        system_input TEXT
+    );
+    
     CREATE TABLE IF NOT EXISTS filter_state (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
-        filter_state TEXT
+        filter_state TEXT CHECK (filter_state IN ('ON','OFF'))
     );
-
-    CREATE TABLE IF NOT EXISTS Outdoor (
+    
+    CREATE TABLE IF NOT EXISTS Outdoor_One (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        pm25 REAL,
+        temperature REAL,
+        humidity REAL,
+        wifi_strength REAL
+    );
+    CREATE TABLE IF NOT EXISTS Outdoor_Two (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        pm25 REAL,
+        temperature REAL,
+        humidity REAL,
+        wifi_strength REAL
+    );
+    CREATE TABLE IF NOT EXISTS Outdoor_Three (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT,
+        pm25 REAL,
+        temperature REAL,
+        humidity REAL,
+        wifi_strength REAL
+    );
+    CREATE TABLE IF NOT EXISTS Outdoor_Four (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT,
         pm25 REAL,
