@@ -7,6 +7,7 @@
 * * * * * python /home/Mainhub/receivedata.py
 * * * * * python /home/Mainhub/readindoor.py
 0 5 * * * python /home/Mainhub/filtertestbaseline.py
+* * * * * python /home/Mainhub/filtersignal.py
 * * * * * python /home/Mainhub/filteralgo.py
 30 8 * * * python /home/Mainhub/stopsps30.py
 31 8 * * * python /home/Mainhub/startsps30.py
