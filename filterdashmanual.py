@@ -29,12 +29,12 @@ EXTERNAL_STYLESHEETS = [
 ]
 
 EMOJI_PATHS = {
-    "good": "/home/emojis/mainhubs/good.png",
-    "moderate": "/home/emojis/mainhubs/moderate.png",
-    "unhealthy_sensitive": "/home/emojis/mainhubs/unhealthy_sensitive.png",
-    "unhealthy": "/home/emojis/mainhubs/unhealthy.png",
-    "very_unhealthy": "/home/emojis/mainhubs/very_unhealthy.png",
-    "hazardous": "/home/emojis/mainhubs/hazardous.png"
+    "good": "/home/Mainhub/emojis/good.png",
+    "moderate": "/home/Mainhub/emojis/moderate.png",
+    "unhealthy_sensitive": "/home/Mainhub/emojis/unhealthy_sensitive.png",
+    "unhealthy": "/home/Mainhub/emojis/unhealthy.png",
+    "very_unhealthy": "/home/Mainhub/emojis/very_unhealthy.png",
+    "hazardous": "/home/Mainhub/emojis/hazardous.png"
 }
 
 logging.basicConfig(
