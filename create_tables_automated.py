@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 
-DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'  # Adjust path as needed
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  # Adjust path as needed
 
 def get_db_connection():
     """Safely returns a connection to the SQLite DB or logs an error."""
