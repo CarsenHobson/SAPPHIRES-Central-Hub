@@ -3,7 +3,7 @@ import datetime
 import logging
 from typing import Optional, Tuple
 
-DB_PATH = '/home/mainhubs/SAPPHIREStest.db'  # Adjust path if needed
+DB_PATH = '/home/Mainhub/SAPPHIRESmanual.db'  # Adjust path if needed
 
 logging.basicConfig(
     filename='insert_filter_state.log',
