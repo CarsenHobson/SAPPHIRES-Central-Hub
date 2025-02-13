@@ -28,12 +28,12 @@ WARNING_COLOR = "#ffc107"
 DANGER_COLOR = "#dc3545"
 
 EMOJI_PATHS = {
-    "good": "/home/Mainhub/good.png",
-    "moderate": "/home/Mainhub/moderate.png",
-    "unhealthy_sensitive": "/home/Mainhub/unhealthy_sensitive.png",
-    "unhealthy": "/home/Mainhub/unhealthy.png",
-    "very_unhealthy": "/home/Mainhub/very_unhealthy.png",
-    "hazardous": "/home/Mainhub/hazardous.png"
+    "good": "/home/emojis/Mainhub/good.png",
+    "moderate": "/home/emojis/Mainhub/moderate.png",
+    "unhealthy_sensitive": "/home/emojis/Mainhub/unhealthy_sensitive.png",
+    "unhealthy": "/home/emojis/Mainhub/unhealthy.png",
+    "very_unhealthy": "/home/emojis/Mainhub/very_unhealthy.png",
+    "hazardous": "/home/emojis/Mainhub/hazardous.png"
 }
 
 # Enhanced Logging Config
