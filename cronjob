@@ -1,9 +1,11 @@
 @reboot python /home/Mainhub/create_tables_automated.py
 @reboot python /home/Mainhub/create_tables_manual.py
 @reboot sleep 10 && python /home/Mainhub/startsps30.py
-@reboot sleep 10 && /home/Mainhub/start_chromium.sh
+@reboot /home/Mainhub/start_chromium.sh
 @reboot python /home/Mainhub/filterdashautomated.py
+#@reboot python /home/Mainhub/filterdashmanual.py
 * * * * * python /home/Mainhub/insert_filter_state.py
+#* * * * * python /home/Mainhub/insert_filter_state_manual.py
 * * * * * python /home/Mainhub/receivedata.py
 * * * * * python /home/Mainhub/readindoor.py
 0 5 * * * python /home/Mainhub/filtertestbaseline.py
