@@ -40,12 +40,20 @@ def insert_data(table_name, pm25_value, temperature, humidity, wifi_strength):
         if 'conn' in locals():
             conn.close()
 
+def on_connect(client, userdata, flags, reason_code, properties):
+    try:
+        for topic in LOCAL_MQTT_TOPICS:
+            client.subscribe(topic)
+            print(f"Subscribed to topic: {topic}")
+    except Exception as e:
+        print(f"Unexpected error in on_connect: {e}")
+
 
 # Callback function to handle incoming messages
 def on_message(client, userdata, message):
     global data_values
     payload = message.payload.decode("utf-8").strip()
-    print(f"Received message from {message.topic}: '{payload}'")
+    print(f"Received message: '{payload}'")
 
     # Determine the table name based on the topic
     topic_to_table = {
@@ -88,18 +96,10 @@ def on_message(client, userdata, message):
     except Exception as db_err:
         print(f"Unexpected error while inserting data: {db_err}")
 
-
-# Callback function to confirm subscription
-def on_subscribe(client, userdata, mid, granted_qos):
-    print(f"Subscribed to topic with QoS {granted_qos[0]}")
-
-
-# Setup the MQTT client
-client = mqtt.Client()
-
-# Attach callback functions
+client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+client.on_connect = on_connect
 client.on_message = on_message
-client.on_subscribe = on_subscribe
+
 
 # Connect to the broker, handling potential errors
 try:
