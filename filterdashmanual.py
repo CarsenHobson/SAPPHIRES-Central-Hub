@@ -29,12 +29,12 @@ EXTERNAL_STYLESHEETS = [
 ]
 
 EMOJI_PATHS = {
-    "good": "/home/Mainhub/emojis/good.png",
-    "moderate": "/home/Mainhub/emojis/moderate.png",
-    "unhealthy_sensitive": "/home/Mainhub/emojis/unhealthy_sensitive.png",
-    "unhealthy": "/home/Mainhub/emojis/unhealthy.png",
-    "very_unhealthy": "/home/Mainhub/emojis/very_unhealthy.png",
-    "hazardous": "/home/Mainhub/emojis/hazardous.png"
+    "good": "/home/mainhubs/good.png",
+    "moderate": "/home/mainhubs/moderate.png",
+    "unhealthy_sensitive": "/home/mainhubs/unhealthy_sensitive.png",
+    "unhealthy": "/home/mainhubs/unhealthy.png",
+    "very_unhealthy": "/home/mainhubs/very_unhealthy.png",
+    "hazardous": "/home/mainhubs/hazardous.png"
 }
 
 logging.basicConfig(
@@ -992,7 +992,8 @@ def update_dashboard(n):
             outdoor_temp_text = f"{outdoor_temp_value} °F"
 
         max_aqi = max(indoor_aqi, outdoor_aqi, 100)
-
+        indoor_emoji = get_aqi_emoji(indoor_aqi)
+        outdoor_emoji = get_aqi_emoji(outdoor_aqi)
         # Build Indoor gauge
         indoor_x, indoor_dx, indoor_ax, indoor_aqi_font, indoor_delta_font, indoor_arrow_size = get_spacing(indoor_aqi, indoor_delta)
         indoor_fig = go.Figure(go.Indicator(
@@ -1019,6 +1020,15 @@ def update_dashboard(n):
             text=indoor_arrow,
             font=dict(size=indoor_arrow_size, color=indoor_arrow_color),
             showarrow=False
+        )
+        indoor_fig.add_layout_image(
+            dict(
+                source=indoor_emoji,
+                xref="paper", yref="paper",
+                x=0.5, y=0.5,
+                sizex=0.2, sizey=0.2,
+                xanchor="center", yanchor="middle"
+            )
         )
         if indoor_delta != 0:
             indoor_fig.add_annotation(
@@ -1054,6 +1064,15 @@ def update_dashboard(n):
             text=outdoor_arrow,
             font=dict(size=outdoor_arrow_size, color=outdoor_arrow_color),
             showarrow=False
+        )
+        outdoor_fig.add_layout_image(
+            dict(
+                source=outdoor_emoji,
+                xref="paper", yref="paper",
+                x=0.5, y=0.5,
+                sizex=0.2, sizey=0.2,
+                xanchor="center", yanchor="middle"
+            )
         )
         if outdoor_delta != 0:
             outdoor_fig.add_annotation(
