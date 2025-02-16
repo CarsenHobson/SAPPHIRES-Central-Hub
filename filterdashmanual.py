@@ -15,7 +15,7 @@ import logging
 # CONFIG & SETUP
 ###################################################
 
-DB_PATH = '/home/mainhubs/SAPPHIREStest.db'  # Adjust path if needed
+DB_PATH = '/home/Mainhub/SAPPHIREStest.db'  # Adjust path if needed
 
 BACKGROUND_COLOR = "#f0f2f5"
 PRIMARY_COLOR = "#FFFFCB"
@@ -29,12 +29,12 @@ EXTERNAL_STYLESHEETS = [
 ]
 
 EMOJI_PATHS = {
-    "good": "/home/mainhubs/good.png",
-    "moderate": "/home/mainhubs/moderate.png",
-    "unhealthy_sensitive": "/home/mainhubs/unhealthy_sensitive.png",
-    "unhealthy": "/home/mainhubs/unhealthy.png",
-    "very_unhealthy": "/home/mainhubs/very_unhealthy.png",
-    "hazardous": "/home/mainhubs/hazardous.png"
+    "good": "/home/Mainhub/good.png",
+    "moderate": "/home/Mainhub/moderate.png",
+    "unhealthy_sensitive": "/home/Mainhub/unhealthy_sensitive.png",
+    "unhealthy": "/home/Mainhub/unhealthy.png",
+    "very_unhealthy": "/home/Mainhub/very_unhealthy.png",
+    "hazardous": "/home/Mainhub/hazardous.png"
 }
 
 logging.basicConfig(
