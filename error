@@ -1,4 +1,49 @@
+Traceback (most recent call last):
+  File "/usr/lib/python3/dist-packages/flask/app.py", line 2525, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/flask/app.py", line 1822, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/flask/app.py", line 1820, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3/dist-packages/flask/app.py", line 1796, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/dash/dash.py", line 1376, in dispatch
+    ctx.run(
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/dash/_callback.py", line 507, in add_context
+    raise err
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/dash/_callback.py", line 496, in add_context
+    output_value = _invoke_callback(func, *func_args, **func_kwargs)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/dash/_callback.py", line 43, in _invoke_callback
+    return func(*args, **kwargs)  # %% callback invoked %%
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/Mainhub/filterdashautomated.py", line 685, in display_page
+    return historical_conditions_layout()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/Mainhub/filterdashautomated.py", line 561, in historical_conditions_layout
+    fig.update_layout(
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/plotly/graph_objs/_figure.py", line 787, in update_layout
+    return super(Figure, self).update_layout(dict1, overwrite, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/plotly/basedatatypes.py", line 1392, in update_layout
+    self.layout.update(dict1, overwrite=overwrite, **kwargs)
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/plotly/basedatatypes.py", line 5123, in update
+    BaseFigure._perform_update(self, kwargs, overwrite=overwrite)
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/plotly/basedatatypes.py", line 3905, in _perform_update
+    BaseFigure._perform_update(plotly_obj[key], val)
+  File "/home/Mainhub/.local/lib/python3.11/site-packages/plotly/basedatatypes.py", line 3882, in _perform_update
+    raise err
+ValueError: Invalid property specified for object of type plotly.graph_objs.layout.XAxis: 'titlefont'
 
+Did you mean "tickfont"?
+
+    Valid properties:
+        anchor
+            If set to an opposite-letter axis id (e.g. `x2`, `y`),
             this axis is bound to the corresponding opposite-letter
             axis. If set to "free", this axis' position is
             determined by `position`.
@@ -505,8 +550,3 @@
             Sets the width (in px) of the zero line.
         
 Did you mean "tickfont"?
-
-Bad property path:
-titlefont
-^^^^^^^^^
-2025-02-20 19:28:20,591 [INFO] 127.0.0.1 - - [20/Feb/2025 19:28:20] "[35m[1mPOST /_dash-update-component HTTP/1.1[0m" 500 -
