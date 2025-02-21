@@ -251,7 +251,7 @@ def dashboard_layout():
                             dcc.Link(
                                 dbc.Button(
                                     "View Historical",
-                                    size="sm",  # make it smaller
+                                    size="sm",
                                     style={
                                         "background-color": "#6e6e6d",
                                         "color": "white",
@@ -264,6 +264,8 @@ def dashboard_layout():
                                 "position": "absolute",
                                 "top": "10px",
                                 "right": "10px",
+                                "z-index": "9999",  # Bring the button to the front
+                                "pointer-events": "auto"  # Ensure it can receive clicks
                             },
                         ),
                     ],
@@ -504,7 +506,20 @@ def historical_conditions_layout():
     try:
         conn = get_db_connection()
         indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 100;", conn)
-        outdoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 100;", conn)
+        # Retrieve outdoor data from each sensor and average them by timestamp
+        outdoor_dfs = []
+        for sensor in ["One", "Two", "Three", "Four"]:
+            df = pd.read_sql(f"SELECT timestamp, pm25 FROM Outdoor_{sensor} ORDER BY timestamp DESC LIMIT 60;", conn)
+            if not df.empty:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                outdoor_dfs.append(df)
+
+        if outdoor_dfs:
+            # Concatenate and compute the mean PM for each timestamp
+            all_outdoor = pd.concat(outdoor_dfs)
+            outdoor_data = all_outdoor.groupby('timestamp', as_index=False)['pm25'].mean().sort_values('timestamp')
+        else:
+            outdoor_data = pd.DataFrame(columns=['timestamp', 'pm25'])
     except Exception as e:
         logging.exception(f"Error retrieving historical data: {e}")
         indoor_data = pd.DataFrame(columns=["timestamp", "pm25"])
@@ -545,17 +560,21 @@ def historical_conditions_layout():
 
     fig.update_layout(
         xaxis=dict(
-            title="Time",
+            title=dict(
+                text="Time",
+                font=dict(size=14, family="Roboto, sans-serif")
+            ),
             showgrid=True,
             gridcolor='lightgrey',
-            titlefont=dict(size=14, family="Roboto, sans-serif"),
             tickfont=dict(size=12)
         ),
         yaxis=dict(
-            title="AQI",
+            title=dict(
+                text="AQI",
+                font=dict(size=14, family="Roboto, sans-serif")
+            ),
             showgrid=True,
             gridcolor='lightgrey',
-            titlefont=dict(size=14, family="Roboto, sans-serif"),
             tickfont=dict(size=12)
         ),
         template="plotly_white",
