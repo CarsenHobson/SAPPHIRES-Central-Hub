@@ -505,11 +505,11 @@ def historical_conditions_layout():
     conn = None
     try:
         conn = get_db_connection()
-        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 100;", conn)
+        indoor_data = pd.read_sql("SELECT timestamp, pm25 FROM Indoor ORDER BY id DESC LIMIT 100;", conn)
         # Retrieve outdoor data from each sensor and average them by timestamp
         outdoor_dfs = []
         for sensor in ["One", "Two", "Three", "Four"]:
-            df = pd.read_sql(f"SELECT timestamp, pm25 FROM Outdoor_{sensor} ORDER BY timestamp DESC LIMIT 60;", conn)
+            df = pd.read_sql(f"SELECT timestamp, pm25 FROM Outdoor_{sensor} ORDER BY id DESC LIMIT 60;", conn)
             if not df.empty:
                 df['timestamp'] = pd.to_datetime(df['timestamp'])
                 outdoor_dfs.append(df)
@@ -721,12 +721,12 @@ def update_dashboard(n):
         indoor_pm = None
         outdoor_pm = 0  # Ensure it's always initialized
         outdoor_temp_df = 0  # Ensure it's always initialized
-        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
-        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
+        indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY id DESC LIMIT 60;", conn)
+        indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY id DESC LIMIT 60;", conn)
         # Query Outdoor PM data
         outdoor_pm_values = []
         for i in ["One", "Two", "Three", "Four"]:
-            outdoor_pm_df = pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 60;", conn)
+            outdoor_pm_df = pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY id DESC LIMIT 60;", conn)
             if not outdoor_pm_df.empty:
                 outdoor_pm_values.append(outdoor_pm_df['pm25'].mean())
 
@@ -738,7 +738,7 @@ def update_dashboard(n):
         # Query Outdoor Temperature data
         outdoor_temp_values = []
         for i in ["One", "Two", "Three", "Four"]:
-            outdoor_temp_df = pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY timestamp DESC LIMIT 1;", conn)
+            outdoor_temp_df = pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY id DESC LIMIT 1;", conn)
             if not outdoor_temp_df.empty:
                 outdoor_temp_values.append(outdoor_temp_df['temperature'].iloc[0])
 
