@@ -1,7 +1,7 @@
 import sqlite3
 import logging
 
-DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  # Adjust path as needed
+DB_PATH = '/home/mainhubs/SAPPHIRESautomated.db'  # Adjust path as needed
 
 def get_db_connection():
     """Safely returns a connection to the SQLite DB or logs an error."""
@@ -81,6 +81,11 @@ def create_tables():
         temperature REAL,
         humidity REAL,
         wifi_strength REAL
+    );
+    CREATE TABLE IF NOT EXISTS navigation_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp TEXT NOT NULL,
+    event TEXT NOT NULL
     );
     """
     conn = None
