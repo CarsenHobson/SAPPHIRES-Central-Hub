@@ -3,7 +3,7 @@ import datetime
 import logging
 from typing import Optional, Tuple
 
-DB_PATH = '/home/Mainhub/SAPPHIRESmanual.db'  # Adjust path if needed
+DB_PATH = '/home/Mainhub/SAPPHIRESmanual.db'  
 
 logging.basicConfig(
     filename='insert_filter_state.log',
@@ -63,11 +63,10 @@ def insert_filter_state(state: str) -> None:
         logging.exception(f"Unexpected error in insert_filter_state: {ex}")
 
 if __name__ == '__main__':
-    # Retrieve the last user and system states:
+    
     user_id, user_state = get_last_state('user_control', 'user_input')
     system_id, system_state = get_last_state('system_control', 'system_input')
 
-    # Decide which state to insert. You can customize this logic as needed:
     if user_state == 'ON' or system_state == 'ON':
         insert_filter_state('ON')
     else:
