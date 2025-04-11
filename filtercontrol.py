@@ -24,8 +24,7 @@ def load_state():
         with open(STATE_FILE, "r") as f:
             return f.read().strip()
     return "OFF"  # Default to OFF if file does not exist
-
-# Load last state
+    
 last_message = load_state()
 
 def on_connect(client, userdata, flags, reason_code, properties):
@@ -54,7 +53,7 @@ def on_message(client, userdata, message):
             else:
                 print(f"Unknown message received: {new_message}")
 
-            # Save state to persist across reboots
+            # Save state to remain across reboots
             save_state(new_message)
             last_message = new_message
         except RuntimeError as e:
@@ -100,4 +99,4 @@ if __name__ == "__main__":
     finally:
         client.loop_stop()
         client.disconnect()
-        # **DO NOT CLEANUP GPIO** to preserve state across cron job executions
+       
