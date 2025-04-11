@@ -71,11 +71,11 @@ def main_loop(duration_seconds: int = 59):
     start_time = time.time()
 
     while time.time() - start_time < duration_seconds:
-        # Get the most recent states:
+        # Get the most recent states
         _, user_state = get_last_state('user_control', 'user_input')
         _, system_state = get_last_state('system_control', 'system_input')
 
-        # Decide which state to insert. You can customize this logic:
+       
         if user_state == 'ON' and system_state == 'ON':
             insert_filter_state('ON')
         elif user_state == 'ON' and system_state == 'OFF':
@@ -83,7 +83,6 @@ def main_loop(duration_seconds: int = 59):
         else:
             insert_filter_state('OFF')
 
-        # Sleep a bit to avoid hammering the DB (adjust as needed)
         time.sleep(1)
 
 if __name__ == '__main__':
