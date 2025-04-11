@@ -14,7 +14,7 @@ import logging
 # GLOBAL CONFIGURATION & CONSTANTS
 ###################################################
 
-DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  # Adjust if needed
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  
 
 EXTERNAL_STYLESHEETS = [
     dbc.themes.BOOTSTRAP,
@@ -36,9 +36,8 @@ EMOJI_PATHS = {
     "hazardous": "/home/Mainhub/hazardous.png"
 }
 
-# Enhanced Logging Config
 logging.basicConfig(
-    filename='enhanced_app.log',   # or another log file path
+    filename='enhanced_app.log',  
     level=logging.DEBUG,
     format='%(asctime)s [%(levelname)s] %(message)s'
 )
@@ -46,7 +45,7 @@ logging.debug("Starting application with enhanced error handling.")
 
 
 ###################################################
-# HELPER FUNCTIONS WITH ERROR HANDLING
+# HELPER FUNCTIONS 
 ###################################################
 
 def get_db_connection():
@@ -229,7 +228,6 @@ def dashboard_layout():
     button_text = "Enable Fan" if last_state == "OFF" else "Disable Fan"
 
     return dbc.Container([
-        # Title row with embedded button
         dbc.Row([
             dbc.Col(
                 html.Div(
@@ -246,7 +244,7 @@ def dashboard_layout():
                                 "margin": "0"
                             },
                         ),
-                        # The smaller, grey button in the top-right corner
+                       
                         html.Div(
                             dcc.Link(
                                 dbc.Button(
@@ -264,8 +262,8 @@ def dashboard_layout():
                                 "position": "absolute",
                                 "top": "10px",
                                 "right": "10px",
-                                "z-index": "9999",  # Bring the button to the front
-                                "pointer-events": "auto"  # Ensure it can receive clicks
+                                "z-index": "9999",  
+                                "pointer-events": "auto" 
                             },
                         ),
                     ],
@@ -280,7 +278,6 @@ def dashboard_layout():
             )
         ], className="g-0"),
 
-        # Main content row with indoor and outdoor cards
         dbc.Row([
             # Indoor card
             dbc.Col(dbc.Card([
@@ -499,9 +496,7 @@ def dashboard_layout():
 
 
 def historical_conditions_layout():
-    """
-    Constructs the historical conditions layout.
-    """
+    
     conn = None
     try:
         conn = get_db_connection()
@@ -515,7 +510,6 @@ def historical_conditions_layout():
                 outdoor_dfs.append(df)
 
         if outdoor_dfs:
-            # Concatenate and compute the mean PM for each timestamp
             all_outdoor = pd.concat(outdoor_dfs)
             outdoor_data = all_outdoor.groupby('timestamp', as_index=False)['pm25'].mean().sort_values('timestamp')
         else:
@@ -735,7 +729,6 @@ def update_dashboard(n):
         else:
             outdoor_pm = 0  # Default value if no PM data is available
 
-        # Query Outdoor Temperature data
         outdoor_temp_values = []
         for i in ["One", "Two", "Three", "Four"]:
             outdoor_temp_df = pd.read_sql(f"SELECT temperature FROM Outdoor_{i} ORDER BY id DESC LIMIT 1;", conn)
@@ -749,9 +742,6 @@ def update_dashboard(n):
 
         conn.close()
 
-        # Display results
-        #print(f"Outdoor PM2.5 Average: {outdoor_pm}")
-        #print(f"Outdoor Temperature Average: {outdoor_temp_df}")
 
         # Defaults
         indoor_aqi = 0
