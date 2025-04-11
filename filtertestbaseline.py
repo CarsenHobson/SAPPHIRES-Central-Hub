@@ -1,8 +1,8 @@
 import sqlite3
 import sys
-import datetime  # For timestamp calculations
+import datetime  s
 
-# Database file path
+
 db_file = 'SAPPHIRESautomated.db' #Use the appropriate database for the state of the study
 #db_file = 'SAPPHRIESmanual.db' 
 TABLES = ['Outdoor_One', 'Outdoor_Two', 'Outdoor_Three', 'Outdoor_Four']
