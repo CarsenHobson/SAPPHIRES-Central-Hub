@@ -7,7 +7,7 @@ import paho.mqtt.client as mqtt
 DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'
 BROKER_ADDRESS = "10.42.0.1"
 MQTT_TOPIC = "Filter"
-RUN_DURATION = 59  # seconds to keep the loop running
+RUN_DURATION = 59  
 
 logging.basicConfig(
     level=logging.INFO, 
@@ -75,7 +75,7 @@ def main():
 
     start_time = time.time()
 
-    # Keep checking and publishing filter state for 59 seconds
+    # Keep checking and publishing filter state 
     while (time.time() - start_time) < RUN_DURATION:
         try:
             last_id, last_filter_value = get_last_filter_state()
@@ -92,10 +92,10 @@ def main():
         except Exception as e:
             logging.error(f"An error occurred while processing filter state: {e}")
 
-        # Add a small sleep to avoid hammering the database or CPU
+        
         time.sleep(1)
 
-    # (Optional) Disconnect after the loop finishes
+   
     client.disconnect()
     logging.info("Finished the 59-second loop and disconnected from MQTT broker.")
 
