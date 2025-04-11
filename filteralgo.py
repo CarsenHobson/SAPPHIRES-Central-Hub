@@ -3,7 +3,7 @@ import sys
 from datetime import datetime
 import sqlite3
 
-# Constants
+
 DATABASE_FILE_PATH = 'SAPPHIRESautomated.db' #Use the appropriate database for the state of the study
 #DATABASE_FILE_PATH = 'SAPPHIRESmanual.db'
 WINDOW_SIZE = 20  # Number of readings to consider
@@ -133,7 +133,6 @@ def insert_relay_state():
 ###########################################################
 if __name__ == "__main__":
     try:
-        # Fetch the most recent relay state from the database when script starts
         current_relay_state = get_last_relay_state()
         print(f"Initial filter state: {current_relay_state}")
 
