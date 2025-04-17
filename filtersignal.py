@@ -3,7 +3,6 @@ import sqlite3
 import logging
 import paho.mqtt.client as mqtt
 
-# Constants
 DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'
 BROKER_ADDRESS = "10.42.0.1"
 MQTT_TOPIC = "Filter"
@@ -41,7 +40,7 @@ def get_last_filter_state():
                 logging.info("No rows found in filter_state table; returning OFF as default.")
                 return (None, "OFF")
             
-            return result  # (id, filter_state)
+            return result  
     except sqlite3.Error as e:
         logging.error(f"Error fetching last_filter_state: {e}")
         return (None, "OFF")
@@ -61,11 +60,11 @@ def main():
       - Connects to MQTT broker
       - Loops for RUN_DURATION seconds, checking and publishing filter state
     """
-    # Create and configure MQTT client
+    
     client = mqtt.Client()
     client.on_publish = on_publish
 
-    # Attempt to connect to the broker
+ 
     try:
         client.connect(BROKER_ADDRESS, 1883, 60)
         logging.info(f"Connected to MQTT broker at {BROKER_ADDRESS}")
@@ -75,7 +74,7 @@ def main():
 
     start_time = time.time()
 
-    # Keep checking and publishing filter state 
+    
     while (time.time() - start_time) < RUN_DURATION:
         try:
             last_id, last_filter_value = get_last_filter_state()
