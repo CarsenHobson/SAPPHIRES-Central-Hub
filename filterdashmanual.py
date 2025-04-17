@@ -15,7 +15,7 @@ import logging
 # CONFIG & SETUP
 ###################################################
 
-DB_PATH = '/home/Mainhub/SAPPHIREStest.db'  # Adjust path if needed
+DB_PATH = '/home/Mainhub/SAPPHIRESmanual.db'  
 
 BACKGROUND_COLOR = "#f0f2f5"
 PRIMARY_COLOR = "#FFFFCB"
@@ -364,7 +364,6 @@ def update_user_control_decision(state):
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Insert the user_input (ON/OFF) in user_control table
         cursor.execute('INSERT INTO user_control (timestamp, user_input) VALUES (?,?)', (timestamp, state))
         conn.commit()
     except sqlite3.Error as e:
@@ -389,7 +388,6 @@ def dashboard_layout():
             dbc.Col(
                 html.Div(
                     [
-                        # The title
                         html.H1(
                             "CURRENT CONDITIONS",
                             className="text-center mb-0",
@@ -401,7 +399,6 @@ def dashboard_layout():
                                 "margin": "0"
                             },
                         ),
-                        # The smaller, grey button in the top-right corner
                         html.Div(
                             dcc.Link(
                                 dbc.Button(
@@ -882,22 +879,18 @@ app.index_string = '''
 </html>
 '''
 
-# Top-level layout with a single dcc.Interval and all the needed Stores
+
 app.layout = html.Div(
     style={"overflow": "hidden", "height": "100vh"},
     children=[
         dcc.Location(id="url", refresh=False),
         dcc.Interval(id="interval-component", interval=60000, n_intervals=0),
 
-        # dcc.Store components to hold states for modals
+       
         dcc.Store(id="on-alert-shown", data=False),
         dcc.Store(id="modal-open-state", data=False),
         dcc.Store(id="disclaimer-modal-open", data=False),
         dcc.Store(id="caution-modal-open", data=False),
-        # >>> ADDED for reminder-cancelled: we'll just open it from the callback, no store needed
-        # but we do need an output in the callback. We'll handle that there.
-
-        # The main page rendering container
         html.Div(id="page-content", style={"outline": "none"}),
     ]
 )
@@ -930,14 +923,14 @@ def update_dashboard(n):
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     try:
-        # Query PM data
+       
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY timestamp DESC LIMIT 60;", conn)
         outdoor_pm = pd.read_sql("SELECT pm25 FROM Outdoor ORDER BY timestamp DESC LIMIT 60;", conn)
         indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY timestamp DESC LIMIT 1;", conn)
         outdoor_temp_df = pd.read_sql("SELECT temperature FROM Outdoor ORDER BY timestamp DESC LIMIT 1;", conn)
         conn.close()
 
-        # Defaults
+  
         indoor_aqi = 0
         outdoor_aqi = 0
         indoor_temp_text = "N/A"
@@ -1142,7 +1135,6 @@ def update_filter_status(n_intervals):
         Output("on-alert-shown", "data"),
         Output("modal-disclaimer", "is_open"),
         Output("modal-caution", "is_open"),
-        # >>> ADDED for reminder-cancelled
         Output("modal-reminder-cancelled", "is_open"),
     ],
     [
@@ -1154,7 +1146,7 @@ def update_filter_status(n_intervals):
         Input("disclaimer-yes", "n_clicks"),
         Input("disclaimer-no", "n_clicks"),
         Input("caution-close", "n_clicks"),
-        Input("reminder-cancel-close", "n_clicks"),  # new close button
+        Input("reminder-cancel-close", "n_clicks"), 
     ],
     [
         State("on-alert-shown", "data"),
@@ -1174,7 +1166,7 @@ def handle_filter_state_event(
     disclaimer_yes_clicks,
     disclaimer_no_clicks,
     caution_close_clicks,
-    reminder_cancel_close_clicks,  # new
+    reminder_cancel_close_clicks,  
     alert_shown,
     modal_open_state,
     disclaimer_open_state,
@@ -1188,20 +1180,15 @@ def handle_filter_state_event(
     reminder_cancel_open = reminder_cancel_open_state
 
     try:
-        # First, check if there's a due reminder
         due_reminder_event_id, reminder_id = get_due_reminder()
         if due_reminder_event_id and not modal_open and not reminder_cancel_open:
-            # >>> ADDED: logic to check if system_control is still ON
-            # If system_control is not ON, we show the "reminder cancelled" modal.
-            # Else, we show the degrade modal as normal.
             current_event_id, current_system_input = get_last_system_state()
             if current_system_input == "ON":
                 logging.info(f"Triggering degrade modal for reminder event_id={due_reminder_event_id}")
                 modal_open = True
-                remove_reminder(reminder_id)  # remove the reminder row
+                remove_reminder(reminder_id)  
                 return modal_open, True, False, False, False
             else:
-                # System is not ON => show "reminder cancelled" modal
                 logging.info(f"Reminder cancelled because system_input={current_system_input}")
                 reminder_cancel_open = True
                 remove_reminder(reminder_id)
@@ -1267,7 +1254,6 @@ def handle_filter_state_event(
             record_event_as_processed(last_event_id, "User closed the caution")
             return False, True, False, caution_open, False
 
-        # >>> ADDED for reminder-cancelled close
         elif triggered_id == "reminder-cancel-close":
             reminder_cancel_open = False
             return False, True, False, False, reminder_cancel_open
@@ -1276,12 +1262,8 @@ def handle_filter_state_event(
 
     except Exception as ex:
         logging.exception(f"Error in handle_filter_state_event callback: {ex}")
-        # Return defaults if there's an error
         return modal_open_state, alert_shown, disclaimer_open_state, caution_open_state, reminder_cancel_open_state
 
-###################################################
-# ROUTING
-###################################################
 @app.callback(
     Output('page-content', 'children'),
     Input('url', 'pathname')
@@ -1294,8 +1276,5 @@ def display_page(pathname):
     else:
         return html.Div("404 Page Not Found", className="text-center mt-4")
 
-###################################################
-# RUN
-###################################################
 if __name__ == '__main__':
     app.run_server(debug=True)
