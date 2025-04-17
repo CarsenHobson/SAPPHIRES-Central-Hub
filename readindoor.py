@@ -7,15 +7,11 @@ from adafruit_bme280 import basic as adafruit_bme280
 db_path = '/home/Mainhub/SAPPHIRESautomated.db'
 #db_path = '/home/Mainhub/SAPPHIRESmanual.db' #Use this directory if in manual state of study
 
-
 conn = sqlite3.connect(db_path)
-
 
 cur = conn.cursor()
 
-
 sps30 = SPS30(port=1)
-
 
 i2c = board.I2C()
 bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
