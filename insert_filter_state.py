@@ -4,7 +4,7 @@ import logging
 import time
 from typing import Optional, Tuple
 
-DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  #Use the appropriate database for the state of the study
+DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  
 logging.basicConfig(
     filename='insert_filter_state.log',
     level=logging.DEBUG,
@@ -12,10 +12,7 @@ logging.basicConfig(
 )
 
 def get_db_connection() -> sqlite3.Connection:
-    """
-    Attempts to open a connection to the SQLite DB.
-    Logs and re-raises on error.
-    """
+
     try:
         return sqlite3.connect(DB_PATH, timeout=5)
     except sqlite3.Error as e:
