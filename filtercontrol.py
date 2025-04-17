@@ -4,14 +4,14 @@ import sys
 import time
 import RPi.GPIO as GPIO
 
-# MQTT settings
+
 MQTT_BROKER = "10.42.0.1"
 MQTT_PORT = 1883
 MQTT_TOPIC = "Filter"
 
-# GPIO settings
+
 GPIO_PIN = 18
-STATE_FILE = "/home/ZeroWcontrol/gpio_state.txt"  # File to store last known GPIO state
+STATE_FILE = "/home/ZeroWcontrol/gpio_state.txt" 
 
 def save_state(state):
     """Save the last GPIO state to a file."""
@@ -23,7 +23,7 @@ def load_state():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r") as f:
             return f.read().strip()
-    return "OFF"  # Default to OFF if file does not exist
+    return "OFF"  
     
 last_message = load_state()
 
@@ -53,7 +53,7 @@ def on_message(client, userdata, message):
             else:
                 print(f"Unknown message received: {new_message}")
 
-            # Save state to remain across reboots
+           
             save_state(new_message)
             last_message = new_message
         except RuntimeError as e:
@@ -67,7 +67,7 @@ if __name__ == "__main__":
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(GPIO_PIN, GPIO.OUT)
 
-        # Restore GPIO state from previous execution
+       
         if last_message == "ON":
             GPIO.output(GPIO_PIN, GPIO.HIGH)
         else:
