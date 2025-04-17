@@ -20,7 +20,9 @@ There are a few other scripts in this repository that are not main functions but
 
 There are also some code meant for testing the system before deploying it. These are simulatedata which just creates random data for the dashboard as well as creates an event every 30 minutes for testing. the last one is testfiltercontrol.py which just inserts ON into system_input forcing the system to turn on the fan.
 
-The cronjob for the central hub is also contained in this repository under cronjob
+The file containing all of the emoji images for the dashboard is in this repository under the emojis file.
+
+The cronjob for the central hub is also contained in this repository under cronjob.
 
 
 
