@@ -16,6 +16,12 @@ The code that looks for filter_state in the database and then sends either OFF o
 
 The code that is responsible for inserting either OFF or ON into the filter_state table in the database is called insert_filter_state for the automated phase and insert_filter_state_manual for the manual phase. This code looks to see if both the system_control and user_control tables contain an ON, then this code will insert an ON into filter_state. It essentially determines if both the system has detected an event and if the user wants the system to be on. If either are not true it will insert OFF into filter_State.
 
+There are a few other scripts in this repository that are not main functions but are essential. These are start_chromium.sh which is the script that launches the dashboard onto the screen. The remove_cursor code removes the cursor from the screen on the dashbaord for visual appeal.
+
+There are also some code meant for testing the system before deploying it. These are simulatedata which just creates random data for the dashboard as well as creates an event every 30 minutes for testing. the last one is testfiltercontrol.py which just inserts ON into system_input forcing the system to turn on the fan.
+
+The cronjob for the central hub is also contained in this repository under cronjob
+
 
 
 
