@@ -10,9 +10,6 @@ import base64
 import os
 import logging
 
-###################################################
-# GLOBAL CONFIGURATION & CONSTANTS
-###################################################
 
 DB_PATH = '/home/Mainhub/SAPPHIRESautomated.db'  
 
@@ -43,10 +40,6 @@ logging.basicConfig(
 )
 logging.debug("Starting application with enhanced error handling.")
 
-
-###################################################
-# HELPER FUNCTIONS 
-###################################################
 
 def get_db_connection():
     """Safely returns a connection to the SQLite DB or logs an error."""
@@ -216,10 +209,6 @@ def get_fallback_gauge():
     return fig
 
 
-###################################################
-# PAGE LAYOUTS
-###################################################
-
 def dashboard_layout():
     """
     Constructs the main dashboard layout with all modals/buttons.
@@ -232,7 +221,7 @@ def dashboard_layout():
             dbc.Col(
                 html.Div(
                     [
-                        # The title itself
+                        
                         html.H1(
                             "CURRENT CONDITIONS",
                             className="text-center mb-0",
@@ -710,14 +699,13 @@ def update_dashboard(n):
         return get_fallback_gauge(), get_fallback_gauge(), "N/A", "N/A"
 
     try:
-        # Initialize output variables with default values
         indoor_temp_df = None
         indoor_pm = None
-        outdoor_pm = 0  # Ensure it's always initialized
-        outdoor_temp_df = 0  # Ensure it's always initialized
+        outdoor_pm = 0  
+        outdoor_temp_df = 0  
         indoor_temp_df = pd.read_sql("SELECT temperature FROM Indoor ORDER BY id DESC LIMIT 60;", conn)
         indoor_pm = pd.read_sql("SELECT pm25 FROM Indoor ORDER BY id DESC LIMIT 60;", conn)
-        # Query Outdoor PM data
+        
         outdoor_pm_values = []
         for i in ["One", "Two", "Three", "Four"]:
             outdoor_pm_df = pd.read_sql(f"SELECT pm25 FROM Outdoor_{i} ORDER BY id DESC LIMIT 60;", conn)
@@ -727,7 +715,7 @@ def update_dashboard(n):
         if outdoor_pm_values:
             outdoor_pm = sum(outdoor_pm_values) / len(outdoor_pm_values)
         else:
-            outdoor_pm = 0  # Default value if no PM data is available
+            outdoor_pm = 0  #
 
         outdoor_temp_values = []
         for i in ["One", "Two", "Three", "Four"]:
@@ -738,12 +726,11 @@ def update_dashboard(n):
         if outdoor_temp_values:
             outdoor_temp_df = sum(outdoor_temp_values) / len(outdoor_temp_values)
         else:
-            outdoor_temp_df = 0  # Default value if no temperature data is available
+            outdoor_temp_df = 0  
 
         conn.close()
 
 
-        # Defaults
         indoor_aqi = 0
         outdoor_aqi = 0
         indoor_temp_text = "N/A"
