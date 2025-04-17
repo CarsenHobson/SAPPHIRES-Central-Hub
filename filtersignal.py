@@ -14,10 +14,7 @@ logging.basicConfig(
 )
 
 def get_db_connection():
-    """
-    Attempts to open a connection to the SQLite DB.
-    Logs and re-raises on error.
-    """
+    
     try:
         conn = sqlite3.connect(DB_PATH, timeout=5)
         return conn
